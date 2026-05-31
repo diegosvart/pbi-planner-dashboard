@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_engram_engram__mem_save",
+      "PowerShell($raw = [System.IO.File]::ReadAllBytes\\('C:\\\\Users\\\\dmorales\\\\AppData\\\\Local\\\\Temp\\\\vcv_pbix\\\\Report\\\\Layout'\\); Write-Output \"size: $\\($raw.Length\\)\"; if \\(Test-Path 'C:\\\\Users\\\\dmorales\\\\AppData\\\\Local\\\\Temp\\\\vcv_pbix\\\\Report\\\\Layout'\\) { Write-Output 'exists at AppData temp' })",
+      "WebFetch(domain:pbi.tools)",
+      "WebFetch(domain:deepwiki.com)"
+    ]
+  }
+}

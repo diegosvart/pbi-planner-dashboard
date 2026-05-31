@@ -1,0 +1,4 @@
+[submodule "aura-agent-kit"]
+	path = aura-agent-kit
+	url = https://github.com/diegosvart/aura-agent-kit.git
+	branch = develop

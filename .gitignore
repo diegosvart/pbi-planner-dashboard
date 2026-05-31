@@ -1,0 +1,21 @@
+# Power BI
+*.pbix
+*.pbit
+
+# Secrets y configuración local
+.env
+.env.*
+*.pem
+*.key
+*.secret
+
+# Harness local identity
+aura-agent-kit/AGENTS.local.md
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Backups de sesión (mantener solo el actual)
+aura-agent-kit/.agent/memory/backups/
