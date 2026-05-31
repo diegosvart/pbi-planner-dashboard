@@ -1,0 +1,223 @@
+{
+  "name": "abbec99c3cfb75dce21c",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 454.20768019713876,
+        "y": 246.02916010678351,
+        "z": 6000,
+        "width": 805.37750701622292,
+        "height": 474.1844068724759,
+        "tabOrder": 6000
+      }
+    },
+    {
+      "id": 1,
+      "position": {
+        "x": 0,
+        "y": 686,
+        "z": 6000,
+        "width": 324,
+        "height": 370,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "msdyn_projecttask.TaskCode"
+        },
+        {
+          "queryRef": "msdyn_projecttask.Project Task Name"
+        },
+        {
+          "queryRef": "msdyn_projecttask.Responsable Principal"
+        },
+        {
+          "queryRef": "msdyn_projecttask.Actualizado"
+        },
+        {
+          "queryRef": "msdyn_projecttask.PercentComplete"
+        },
+        {
+          "queryRef": "msdyn_projecttask.DueDateTexto"
+        },
+        {
+          "queryRef": "msdyn_projecttask.DaysOverdue"
+        },
+        {
+          "queryRef": "msdyn_projecttask.Ultima actualizacion"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "m",
+          "Entity": "msdyn_projecttask",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "TaskCode"
+          },
+          "Name": "msdyn_projecttask.TaskCode",
+          "NativeReferenceName": "Código"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "Project Task Name"
+          },
+          "Name": "msdyn_projecttask.Project Task Name",
+          "NativeReferenceName": "Nombre Proyecto"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "Responsable"
+          },
+          "Name": "msdyn_projecttask.Responsable Principal",
+          "NativeReferenceName": "Responsable"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "DaysOverdue"
+          },
+          "Name": "msdyn_projecttask.DaysOverdue",
+          "NativeReferenceName": "Días de retraso"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "Ultima actualizacion"
+          },
+          "Name": "msdyn_projecttask.Ultima actualizacion",
+          "NativeReferenceName": "Última actualizacion"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "DueDateTexto"
+          },
+          "Name": "msdyn_projecttask.DueDateTexto",
+          "NativeReferenceName": "Vencimiento"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "PercentComplete"
+          },
+          "Name": "msdyn_projecttask.PercentComplete",
+          "NativeReferenceName": "% Avance"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "Actualizado"
+          },
+          "Name": "msdyn_projecttask.Actualizado",
+          "NativeReferenceName": "Actualizado"
+        }
+      ]
+    },
+    "columnProperties": {
+      "msdyn_projecttask.DueDateTexto": {
+        "displayName": "Vencimiento"
+      },
+      "msdyn_projecttask.DaysOverdue": {
+        "displayName": "Días de retraso"
+      },
+      "msdyn_projecttask.PercentComplete": {
+        "displayName": "% Avance"
+      },
+      "msdyn_projecttask.Ultima actualizacion": {
+        "displayName": "Última actualizacion"
+      },
+      "msdyn_projecttask.Project Task Name": {
+        "displayName": "Nombre Proyecto"
+      },
+      "msdyn_projecttask.TaskCode": {
+        "displayName": "Código"
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "filterSortOrder": 3,
+    "objects": {
+      "columnHeaders": [
+        {
+          "properties": {}
+        }
+      ],
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "stylePreset": [
+        {
+          "properties": {
+            "name": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Default'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

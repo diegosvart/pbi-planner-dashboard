@@ -1,0 +1,100 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 0,
+        "y": 69.960970033142161
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 443.01810507415684,
+            "y": 0
+          },
+          "nodeIndex": "msdyn_project",
+          "nodeLineageTag": "56b3023d-3a20-47db-9dc0-4aa339239e31",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 5
+        },
+        {
+          "location": {
+            "x": 0,
+            "y": 0
+          },
+          "nodeIndex": "msdyn_projectgoal",
+          "nodeLineageTag": "8c776b6e-a824-42fa-a980-8e526e7e4158",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 1
+        },
+        {
+          "location": {
+            "x": 355.59326985198527,
+            "y": 411.051873207273
+          },
+          "nodeIndex": "msdyn_projecttask",
+          "nodeLineageTag": "40e17848-bcdc-404d-b6f4-75305d7df18b",
+          "size": {
+            "height": 356,
+            "width": 286
+          },
+          "zIndex": 6
+        },
+        {
+          "location": {
+            "x": 0,
+            "y": 394.31140328587543
+          },
+          "nodeIndex": "msdyn_projecttasktogoal",
+          "nodeLineageTag": "31e9a393-c3da-42e2-a34f-eea816804931",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 2
+        },
+        {
+          "location": {
+            "x": 765.54050229677136,
+            "y": 367.96678951803386
+          },
+          "nodeIndex": "msdyn_resourceassignment",
+          "nodeLineageTag": "1e8bcd1d-b8a2-4f37-8b68-ab7ebd67923d",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 3
+        },
+        {
+          "location": {
+            "x": 797.27738681129279,
+            "y": 62.879802319228929
+          },
+          "nodeIndex": "ScopeFilter",
+          "nodeLineageTag": "92821c82-f47c-449d-b1c8-e470556b3190",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 4
+        }
+      ],
+      "name": "Todas las tablas",
+      "zoomValue": 89.19259052056961,
+      "pinKeyFieldsToTop": true,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "Todas las tablas",
+  "defaultDiagram": "Todas las tablas"
+}

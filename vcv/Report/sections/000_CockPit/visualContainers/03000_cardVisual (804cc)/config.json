@@ -1,0 +1,96 @@
+{
+  "name": "804ccbb5e3e2281dfc3a",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 792.52633101268975,
+        "y": 111.28020636153009,
+        "z": 3000,
+        "width": 188.20179341501816,
+        "height": 111.44910671503868,
+        "tabOrder": 3000
+      }
+    },
+    {
+      "id": 1,
+      "position": {
+        "x": 0,
+        "y": 216,
+        "z": 3000,
+        "width": 158,
+        "height": 100,
+        "tabOrder": 3000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "cardVisual",
+    "projections": {
+      "Data": [
+        {
+          "queryRef": "msdyn_projecttask.En Riesgo"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "m",
+          "Entity": "msdyn_projecttask",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "En Riesgo"
+          },
+          "Name": "msdyn_projecttask.En Riesgo",
+          "NativeReferenceName": "En Riesgo"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "m"
+                }
+              },
+              "Property": "En Riesgo"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "objects": {
+      "border": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          },
+          "selector": {
+            "id": "default"
+          }
+        }
+      ]
+    }
+  }
+}

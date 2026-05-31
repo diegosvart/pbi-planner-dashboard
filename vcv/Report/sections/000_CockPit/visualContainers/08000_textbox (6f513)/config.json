@@ -1,0 +1,57 @@
+{
+  "name": "6f513c5bdaeaa8d54d75",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 436.0760456273764,
+        "y": 73.738806549235662,
+        "z": 8000,
+        "width": 450.060991697059,
+        "height": 38.140762008225344,
+        "tabOrder": 8000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "textbox",
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Panel: ¿Cómo vamos?",
+                    "textStyle": {
+                      "fontFamily": "Arial",
+                      "fontSize": "12pt"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "center"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
