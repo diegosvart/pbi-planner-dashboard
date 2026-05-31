@@ -1,0 +1,109 @@
+{
+  "name": "b8a4230ea0f81138ba71",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 111.21481071698184,
+        "y": 111.28020636153009,
+        "z": 0,
+        "width": 216.58977342733931,
+        "height": 111.44910671503868,
+        "tabOrder": 0
+      }
+    },
+    {
+      "id": 1,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "width": 324,
+        "height": 100,
+        "tabOrder": 0
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "cardVisual",
+    "projections": {
+      "Data": [
+        {
+          "queryRef": "msdyn_projecttask.% Avance Promedio"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "m",
+          "Entity": "msdyn_projecttask",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "% Avance Promedio"
+          },
+          "Name": "msdyn_projecttask.% Avance Promedio",
+          "NativeReferenceName": "% Avance Promedio"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "m"
+                }
+              },
+              "Property": "% Avance Promedio"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "objects": {
+      "layout": [
+        {
+          "properties": {
+            "columnCount": {
+              "expr": {
+                "Literal": {
+                  "Value": "5L"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "border": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          },
+          "selector": {
+            "id": "default"
+          }
+        }
+      ]
+    }
+  }
+}

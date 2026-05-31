@@ -1,0 +1,291 @@
+[
+  {
+    "name": "8329f1ea6074b60b640e",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "DaysOverdue"
+      }
+    },
+    "type": "Advanced",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "ordinal": 0
+  },
+  {
+    "name": "cbf61ee26f22703f0b6e",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "DueDateTexto"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 1,
+    "isHiddenInViewMode": false,
+    "ordinal": 1
+  },
+  {
+    "name": "ccae95e76512cc09746d",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "IsLive"
+      }
+    },
+    "filter": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "m",
+          "Entity": "msdyn_projecttask",
+          "Type": 0
+        }
+      ],
+      "Where": [
+        {
+          "Condition": {
+            "In": {
+              "Expressions": [
+                {
+                  "Column": {
+                    "Expression": {
+                      "SourceRef": {
+                        "Source": "m"
+                      }
+                    },
+                    "Property": "IsLive"
+                  }
+                }
+              ],
+              "Values": [
+                [
+                  {
+                    "Literal": {
+                      "Value": "true"
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "type": "Categorical",
+    "howCreated": 1,
+    "objects": {
+      "general": [
+        {
+          "properties": {}
+        }
+      ]
+    },
+    "isHiddenInViewMode": false,
+    "ordinal": 2
+  },
+  {
+    "name": "fe2d723cbcae030854d1",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "Project Task Name"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "ordinal": 3
+  },
+  {
+    "name": "efad6fdd41b1c01ad1e7",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "IsParentTask"
+      }
+    },
+    "filter": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "m",
+          "Entity": "msdyn_projecttask",
+          "Type": 0
+        }
+      ],
+      "Where": [
+        {
+          "Condition": {
+            "In": {
+              "Expressions": [
+                {
+                  "Column": {
+                    "Expression": {
+                      "SourceRef": {
+                        "Source": "m"
+                      }
+                    },
+                    "Property": "IsParentTask"
+                  }
+                }
+              ],
+              "Values": [
+                [
+                  {
+                    "Literal": {
+                      "Value": "true"
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "type": "Categorical",
+    "howCreated": 1,
+    "objects": {},
+    "ordinal": 4
+  },
+  {
+    "name": "2cb5115f100cf46663d0",
+    "expression": {
+      "Measure": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "Responsable"
+      }
+    },
+    "type": "Advanced",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "ordinal": 5
+  },
+  {
+    "name": "b906113556cfbaf6aec4",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "Status"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 1,
+    "isHiddenInViewMode": false,
+    "ordinal": 6
+  },
+  {
+    "name": "2fede62af42f070c3f3e",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "TaskCode"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "ordinal": 7
+  },
+  {
+    "name": "86f4b082efcdf8cdb94c",
+    "expression": {
+      "Measure": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "Total Tareas"
+      }
+    },
+    "type": "Advanced",
+    "howCreated": 1,
+    "isHiddenInViewMode": false,
+    "ordinal": 8
+  },
+  {
+    "name": "3a95138f577997dad642",
+    "expression": {
+      "Measure": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "Ultima actualizacion"
+      }
+    },
+    "type": "Advanced",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "ordinal": 9
+  },
+  {
+    "name": "eda99c43183e7044607b",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "PercentComplete"
+      }
+    },
+    "type": "Advanced",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "ordinal": 10
+  },
+  {
+    "name": "6f745f5d104a4e792ecd",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "Estado Padre"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 1,
+    "isHiddenInViewMode": false,
+    "ordinal": 11
+  }
+]
