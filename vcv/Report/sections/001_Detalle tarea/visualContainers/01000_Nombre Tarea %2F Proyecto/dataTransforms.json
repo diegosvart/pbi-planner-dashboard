@@ -1,0 +1,78 @@
+{
+  "projectionOrdering": {
+    "Rows": [
+      0
+    ]
+  },
+  "queryMetadata": {
+    "Select": [
+      {
+        "Restatement": "Project Task Name",
+        "Name": "msdyn_projecttask.Project Task Name",
+        "Type": 2048
+      }
+    ],
+    "Filters": [
+      {
+        "type": 0,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "IsParentTask"
+          }
+        }
+      },
+      {
+        "type": 0,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "Project Task Name"
+          }
+        }
+      }
+    ]
+  },
+  "visualElements": [
+    {
+      "DataRoles": [
+        {
+          "Name": "Rows",
+          "Projection": 0,
+          "isActive": false
+        }
+      ]
+    }
+  ],
+  "selects": [
+    {
+      "displayName": "Project Task Name",
+      "queryName": "msdyn_projecttask.Project Task Name",
+      "roles": {
+        "Rows": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 1
+      },
+      "expr": {
+        "Column": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "Project Task Name"
+        }
+      }
+    }
+  ]
+}

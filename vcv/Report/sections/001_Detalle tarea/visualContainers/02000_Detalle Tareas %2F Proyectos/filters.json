@@ -1,23 +1,6 @@
 [
   {
-    "name": "8329f1ea6074b60b640e",
-    "expression": {
-      "Column": {
-        "Expression": {
-          "SourceRef": {
-            "Entity": "msdyn_projecttask"
-          }
-        },
-        "Property": "DaysOverdue"
-      }
-    },
-    "type": "Advanced",
-    "howCreated": 0,
-    "isHiddenInViewMode": false,
-    "ordinal": 0
-  },
-  {
-    "name": "cbf61ee26f22703f0b6e",
+    "name": "b285dc44d900c81401ea",
     "expression": {
       "Column": {
         "Expression": {
@@ -31,90 +14,10 @@
     "type": "Categorical",
     "howCreated": 0,
     "isHiddenInViewMode": false,
-    "ordinal": 1
+    "ordinal": 0
   },
   {
-    "name": "ccae95e76512cc09746d",
-    "expression": {
-      "Column": {
-        "Expression": {
-          "SourceRef": {
-            "Entity": "msdyn_projecttask"
-          }
-        },
-        "Property": "IsLive"
-      }
-    },
-    "filter": {
-      "Version": 2,
-      "From": [
-        {
-          "Name": "m",
-          "Entity": "msdyn_projecttask",
-          "Type": 0
-        }
-      ],
-      "Where": [
-        {
-          "Condition": {
-            "In": {
-              "Expressions": [
-                {
-                  "Column": {
-                    "Expression": {
-                      "SourceRef": {
-                        "Source": "m"
-                      }
-                    },
-                    "Property": "IsLive"
-                  }
-                }
-              ],
-              "Values": [
-                [
-                  {
-                    "Literal": {
-                      "Value": "true"
-                    }
-                  }
-                ]
-              ]
-            }
-          }
-        }
-      ]
-    },
-    "type": "Categorical",
-    "howCreated": 1,
-    "objects": {
-      "general": [
-        {
-          "properties": {}
-        }
-      ]
-    },
-    "isHiddenInViewMode": false,
-    "ordinal": 2
-  },
-  {
-    "name": "fe2d723cbcae030854d1",
-    "expression": {
-      "Column": {
-        "Expression": {
-          "SourceRef": {
-            "Entity": "msdyn_projecttask"
-          }
-        },
-        "Property": "Project Task Name"
-      }
-    },
-    "type": "Categorical",
-    "howCreated": 0,
-    "isHiddenInViewMode": false,
-    "ordinal": 3
-  },
-  {
-    "name": "efad6fdd41b1c01ad1e7",
+    "name": "7151e8e00085b5144e74",
     "expression": {
       "Column": {
         "Expression": {
@@ -154,7 +57,7 @@
                 [
                   {
                     "Literal": {
-                      "Value": "true"
+                      "Value": "false"
                     }
                   }
                 ]
@@ -167,95 +70,10 @@
     "type": "Categorical",
     "howCreated": 1,
     "objects": {},
-    "ordinal": 4
+    "ordinal": 1
   },
   {
-    "name": "2cb5115f100cf46663d0",
-    "expression": {
-      "Measure": {
-        "Expression": {
-          "SourceRef": {
-            "Entity": "msdyn_projecttask"
-          }
-        },
-        "Property": "Responsable"
-      }
-    },
-    "type": "Advanced",
-    "howCreated": 0,
-    "isHiddenInViewMode": false,
-    "ordinal": 5
-  },
-  {
-    "name": "b906113556cfbaf6aec4",
-    "expression": {
-      "Column": {
-        "Expression": {
-          "SourceRef": {
-            "Entity": "msdyn_projecttask"
-          }
-        },
-        "Property": "Status"
-      }
-    },
-    "type": "Categorical",
-    "howCreated": 1,
-    "isHiddenInViewMode": false,
-    "ordinal": 6
-  },
-  {
-    "name": "2fede62af42f070c3f3e",
-    "expression": {
-      "Column": {
-        "Expression": {
-          "SourceRef": {
-            "Entity": "msdyn_projecttask"
-          }
-        },
-        "Property": "TaskCode"
-      }
-    },
-    "type": "Categorical",
-    "howCreated": 1,
-    "isHiddenInViewMode": false,
-    "ordinal": 7
-  },
-  {
-    "name": "86f4b082efcdf8cdb94c",
-    "expression": {
-      "Measure": {
-        "Expression": {
-          "SourceRef": {
-            "Entity": "msdyn_projecttask"
-          }
-        },
-        "Property": "Total Tareas"
-      }
-    },
-    "type": "Advanced",
-    "howCreated": 1,
-    "isHiddenInViewMode": false,
-    "ordinal": 8
-  },
-  {
-    "name": "3a95138f577997dad642",
-    "expression": {
-      "Measure": {
-        "Expression": {
-          "SourceRef": {
-            "Entity": "msdyn_projecttask"
-          }
-        },
-        "Property": "Ultima actualizacion"
-      }
-    },
-    "type": "Advanced",
-    "howCreated": 0,
-    "isHiddenInViewMode": false,
-    "ordinal": 9
-  },
-  {
-    "name": "eda99c43183e7044607b",
+    "name": "d340b2cac04b69517ca8",
     "expression": {
       "Column": {
         "Expression": {
@@ -269,10 +87,10 @@
     "type": "Advanced",
     "howCreated": 0,
     "isHiddenInViewMode": false,
-    "ordinal": 10
+    "ordinal": 2
   },
   {
-    "name": "6f745f5d104a4e792ecd",
+    "name": "8630fda37b26945ab681",
     "expression": {
       "Column": {
         "Expression": {
@@ -280,12 +98,164 @@
             "Entity": "msdyn_projecttask"
           }
         },
-        "Property": "Estado Padre"
+        "Property": "Project Task Name"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "ordinal": 3
+  },
+  {
+    "name": "21ede86992d746bb0bd2",
+    "expression": {
+      "Measure": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "Responsable"
+      }
+    },
+    "type": "Advanced",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "ordinal": 4
+  },
+  {
+    "name": "19c2ff30ceb122bb6800",
+    "expression": {
+      "HierarchyLevel": {
+        "Expression": {
+          "Hierarchy": {
+            "Expression": {
+              "PropertyVariationSource": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "msdyn_projecttask"
+                  }
+                },
+                "Name": "Variación",
+                "Property": "Start Date"
+              }
+            },
+            "Hierarchy": "Jerarquía de fechas"
+          }
+        },
+        "Level": "Año"
+      }
+    },
+    "type": "Advanced",
+    "howCreated": 1,
+    "isHiddenInViewMode": false,
+    "ordinal": 5
+  },
+  {
+    "name": "42ec3a8b9e8078374670",
+    "expression": {
+      "HierarchyLevel": {
+        "Expression": {
+          "Hierarchy": {
+            "Expression": {
+              "PropertyVariationSource": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "msdyn_projecttask"
+                  }
+                },
+                "Name": "Variación",
+                "Property": "Start Date"
+              }
+            },
+            "Hierarchy": "Jerarquía de fechas"
+          }
+        },
+        "Level": "Día"
+      }
+    },
+    "type": "Advanced",
+    "howCreated": 1,
+    "isHiddenInViewMode": false,
+    "ordinal": 6
+  },
+  {
+    "name": "0be482b015a31d1e26e6",
+    "expression": {
+      "HierarchyLevel": {
+        "Expression": {
+          "Hierarchy": {
+            "Expression": {
+              "PropertyVariationSource": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "msdyn_projecttask"
+                  }
+                },
+                "Name": "Variación",
+                "Property": "Start Date"
+              }
+            },
+            "Hierarchy": "Jerarquía de fechas"
+          }
+        },
+        "Level": "Mes"
       }
     },
     "type": "Categorical",
     "howCreated": 1,
     "isHiddenInViewMode": false,
-    "ordinal": 11
+    "ordinal": 7
+  },
+  {
+    "name": "e24f09394371da0a5511",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "statuscodename"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "ordinal": 8
+  },
+  {
+    "name": "2faca78bd594c4295224",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "TaskCode"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "ordinal": 9
+  },
+  {
+    "name": "73cc74eb7aa8622bbe74",
+    "expression": {
+      "Measure": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "Ultima actualizacion"
+      }
+    },
+    "type": "Advanced",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "ordinal": 10
   }
 ]

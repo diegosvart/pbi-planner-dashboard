@@ -1,6 +1,6 @@
 [
   {
-    "name": "b28ad33d2a3a67909837",
+    "name": "56d3b996e705040ba9d0",
     "expression": {
       "Column": {
         "Expression": {
@@ -8,7 +8,7 @@
             "Entity": "msdyn_projecttask"
           }
         },
-        "Property": "ParentTaskCode"
+        "Property": "IsParentTask"
       }
     },
     "filter": {
@@ -32,7 +32,7 @@
                         "Source": "m"
                       }
                     },
-                    "Property": "ParentTaskCode"
+                    "Property": "IsParentTask"
                   }
                 }
               ],
@@ -40,7 +40,7 @@
                 [
                   {
                     "Literal": {
-                      "Value": "'PORT-014'"
+                      "Value": "true"
                     }
                   }
                 ]
@@ -51,6 +51,7 @@
       ]
     },
     "type": "Categorical",
-    "howCreated": 5
+    "howCreated": 1,
+    "objects": {}
   }
 ]
