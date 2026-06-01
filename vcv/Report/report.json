@@ -1,6 +1,15 @@
 {
   "id": 0,
   "layoutOptimization": 1,
+  "pods": [
+    {
+      "boundSection": "ff051d8d6a4bff48188b",
+      "config": "{}",
+      "name": "f7714a0028e31e8b7379",
+      "parameters": "[{\"name\":\"8cefeb2389569cc90500\",\"boundFilter\":\"53a78f0305700e04a121\",\"fieldExpr\":{\"Column\":{\"Expression\":{\"SourceRef\":{\"Entity\":\"msdyn_projecttask\"}},\"Property\":\"TaskCode\"}}}]",
+      "type": 1
+    }
+  ],
   "resourcePackages": [
     {
       "resourcePackage": {
