@@ -1,0 +1,50 @@
+{
+  "name": "8afb467f00ba4007de9b",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 531.99030452846148,
+        "y": 222.27017529954162,
+        "width": 300,
+        "height": 300,
+        "z": 0
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "msdyn_projecttask.TaskCode"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "m",
+          "Entity": "msdyn_projecttask",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "TaskCode"
+          },
+          "Name": "msdyn_projecttask.TaskCode",
+          "NativeReferenceName": "TaskCode"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

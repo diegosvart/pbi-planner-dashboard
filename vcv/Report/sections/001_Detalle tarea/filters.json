@@ -1,1 +1,17 @@
-[]
+[
+  {
+    "name": "53a78f0305700e04a121",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "TaskCode"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  }
+]
