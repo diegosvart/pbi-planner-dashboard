@@ -220,7 +220,7 @@
       }
     },
     "type": "Categorical",
-    "howCreated": 0,
+    "howCreated": 1,
     "isHiddenInViewMode": false,
     "ordinal": 8
   },
@@ -237,7 +237,7 @@
       }
     },
     "type": "Categorical",
-    "howCreated": 0,
+    "howCreated": 1,
     "isHiddenInViewMode": false,
     "ordinal": 9
   },

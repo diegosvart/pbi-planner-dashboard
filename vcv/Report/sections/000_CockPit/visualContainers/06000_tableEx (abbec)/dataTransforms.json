@@ -232,32 +232,6 @@
             "Property": "Estado Padre"
           }
         }
-      },
-      {
-        "type": 0,
-        "expression": {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "msdyn_projecttask"
-              }
-            },
-            "Property": "Actualizado"
-          }
-        }
-      },
-      {
-        "type": 0,
-        "expression": {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "msdyn_projecttask"
-              }
-            },
-            "Property": "ParentTaskCode"
-          }
-        }
       }
     ]
   },

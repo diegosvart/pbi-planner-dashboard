@@ -12,49 +12,369 @@
           }
         }
       }
+    ],
+    "grid": [
+      {
+        "properties": {
+          "gridHorizontalColor": {
+            "solid": {
+              "color": {
+                "expr": {
+                  "ThemeDataColor": {
+                    "ColorId": 2,
+                    "Percent": 0.6
+                  }
+                }
+              }
+            }
+          },
+          "gridHorizontalWeight": {
+            "expr": {
+              "Literal": {
+                "Value": "2D"
+              }
+            }
+          },
+          "gridVertical": {
+            "expr": {
+              "Literal": {
+                "Value": "true"
+              }
+            }
+          },
+          "gridVerticalColor": {
+            "solid": {
+              "color": {
+                "expr": {
+                  "ThemeDataColor": {
+                    "ColorId": 0,
+                    "Percent": -0.3
+                  }
+                }
+              }
+            }
+          },
+          "gridVerticalWeight": {
+            "expr": {
+              "Literal": {
+                "Value": "2D"
+              }
+            }
+          },
+          "outlineStyle": {
+            "expr": {
+              "Literal": {
+                "Value": "15D"
+              }
+            }
+          },
+          "outlineColor": {
+            "solid": {
+              "color": {
+                "expr": {
+                  "Literal": {
+                    "Value": "'#FF0F0F'"
+                  }
+                }
+              }
+            }
+          },
+          "rowPadding": {
+            "expr": {
+              "Literal": {
+                "Value": "2D"
+              }
+            }
+          },
+          "textSize": {
+            "expr": {
+              "Literal": {
+                "Value": "11D"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "values": [
+      {
+        "properties": {
+          "bold": {
+            "expr": {
+              "Literal": {
+                "Value": "false"
+              }
+            }
+          }
+        }
+      },
+      {
+        "properties": {
+          "backColor": {
+            "solid": {
+              "color": {
+                "expr": {
+                  "FillRule": {
+                    "Input": {
+                      "Aggregation": {
+                        "Expression": {
+                          "Column": {
+                            "Expression": {
+                              "SourceRef": {
+                                "Entity": "msdyn_projecttask"
+                              }
+                            },
+                            "Property": "Atraso"
+                          }
+                        },
+                        "Function": 5
+                      }
+                    },
+                    "FillRule": {
+                      "linearGradient3": {
+                        "min": {
+                          "color": {
+                            "Literal": {
+                              "Value": "'#FFFFFF'"
+                            }
+                          },
+                          "value": {
+                            "Literal": {
+                              "Value": "0D"
+                            }
+                          }
+                        },
+                        "mid": {
+                          "color": {
+                            "Literal": {
+                              "Value": "'midColor'"
+                            }
+                          },
+                          "value": {
+                            "Literal": {
+                              "Value": "4D"
+                            }
+                          }
+                        },
+                        "max": {
+                          "color": {
+                            "Literal": {
+                              "Value": "'#DF8888'"
+                            }
+                          },
+                          "value": {
+                            "Literal": {
+                              "Value": "7D"
+                            }
+                          }
+                        },
+                        "nullColoringStrategy": {
+                          "strategy": {
+                            "Literal": {
+                              "Value": "'asZero'"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "selector": {
+          "data": [
+            {
+              "dataViewWildcard": {
+                "matchingOption": 1
+              }
+            }
+          ],
+          "metadata": "msdyn_projecttask.Atraso"
+        }
+      },
+      {
+        "properties": {
+          "backColor": {
+            "solid": {
+              "color": {
+                "expr": {
+                  "Conditional": {
+                    "Cases": [
+                      {
+                        "Condition": {
+                          "Comparison": {
+                            "ComparisonKind": 0,
+                            "Left": {
+                              "Aggregation": {
+                                "Expression": {
+                                  "Column": {
+                                    "Expression": {
+                                      "SourceRef": {
+                                        "Entity": "msdyn_projecttask"
+                                      }
+                                    },
+                                    "Property": "Project Bucket"
+                                  }
+                                },
+                                "Function": 3
+                              }
+                            },
+                            "Right": {
+                              "Literal": {
+                                "Value": "'In Progress'"
+                              }
+                            }
+                          },
+                          "Annotations": {
+                            "PowerBI.SQExprEvaluationKind": 1,
+                            "PowerBI.SQExprTextOperatorOption": 2
+                          }
+                        },
+                        "Value": {
+                          "Literal": {
+                            "Value": "'#f5c4af'"
+                          }
+                        }
+                      },
+                      {
+                        "Condition": {
+                          "Comparison": {
+                            "ComparisonKind": 0,
+                            "Left": {
+                              "Aggregation": {
+                                "Expression": {
+                                  "Column": {
+                                    "Expression": {
+                                      "SourceRef": {
+                                        "Entity": "msdyn_projecttask"
+                                      }
+                                    },
+                                    "Property": "Project Bucket"
+                                  }
+                                },
+                                "Function": 3
+                              }
+                            },
+                            "Right": {
+                              "Literal": {
+                                "Value": "'Backlog'"
+                              }
+                            }
+                          },
+                          "Annotations": {
+                            "PowerBI.SQExprEvaluationKind": 1,
+                            "PowerBI.SQExprTextOperatorOption": 2
+                          }
+                        },
+                        "Value": {
+                          "Literal": {
+                            "Value": "'#cccccc'"
+                          }
+                        }
+                      },
+                      {
+                        "Condition": {
+                          "Comparison": {
+                            "ComparisonKind": 0,
+                            "Left": {
+                              "Aggregation": {
+                                "Expression": {
+                                  "Column": {
+                                    "Expression": {
+                                      "SourceRef": {
+                                        "Entity": "msdyn_projecttask"
+                                      }
+                                    },
+                                    "Property": "Project Bucket"
+                                  }
+                                },
+                                "Function": 3
+                              }
+                            },
+                            "Right": {
+                              "Literal": {
+                                "Value": "'Done'"
+                              }
+                            }
+                          },
+                          "Annotations": {
+                            "PowerBI.SQExprEvaluationKind": 1,
+                            "PowerBI.SQExprTextOperatorOption": 2
+                          }
+                        },
+                        "Value": {
+                          "Literal": {
+                            "Value": "'#508E5F'"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "selector": {
+          "data": [
+            {
+              "dataViewWildcard": {
+                "matchingOption": 1
+              }
+            }
+          ],
+          "metadata": "msdyn_projecttask.Project Bucket"
+        }
+      }
+    ],
+    "columnHeaders": [
+      {
+        "properties": {
+          "bold": {
+            "expr": {
+              "Literal": {
+                "Value": "true"
+              }
+            }
+          }
+        }
+      }
     ]
   },
   "projectionOrdering": {
     "Values": [
       0,
+      5,
       1,
+      6,
       2,
       3,
-      4,
-      5,
-      6
+      7,
+      4
     ]
   },
   "queryMetadata": {
     "Select": [
       {
-        "Restatement": "TaskCode",
-        "Name": "msdyn_projecttask.TaskCode",
-        "Type": 2048
-      },
-      {
-        "Restatement": "Project Task Name",
+        "Restatement": "Nombre",
         "Name": "msdyn_projecttask.Project Task Name",
         "Type": 2048
       },
       {
-        "Restatement": "statuscodename",
-        "Name": "msdyn_projecttask.statuscodename",
-        "Type": 2048
-      },
-      {
-        "Restatement": "PercentComplete",
+        "Restatement": "% Avance",
         "Name": "msdyn_projecttask.PercentComplete",
         "Type": 1,
         "Format": "0"
       },
       {
-        "Restatement": "DueDateTexto",
+        "Restatement": "Vencimiento",
         "Name": "msdyn_projecttask.DueDateTexto",
         "Type": 2048
       },
       {
-        "Restatement": "Ultima actualizacion",
+        "Restatement": "Actualizado",
         "Name": "msdyn_projecttask.Ultima actualizacion",
         "Type": 2048
       },
@@ -62,6 +382,22 @@
         "Restatement": "Responsable",
         "Name": "msdyn_projecttask.Responsable",
         "Type": 2048
+      },
+      {
+        "Restatement": "Estado",
+        "Name": "msdyn_projecttask.Project Bucket",
+        "Type": 2048
+      },
+      {
+        "Restatement": "Fecha inicio",
+        "Name": "msdyn_projecttask.StartDateTexto",
+        "Type": 2048
+      },
+      {
+        "Restatement": "Atraso",
+        "Name": "msdyn_projecttask.Atraso",
+        "Type": 3,
+        "Format": "0"
       }
     ],
     "Filters": [
@@ -253,7 +589,17 @@
         },
         {
           "Name": "Values",
+          "Projection": 5,
+          "isActive": false
+        },
+        {
+          "Name": "Values",
           "Projection": 1,
+          "isActive": false
+        },
+        {
+          "Name": "Values",
+          "Projection": 6,
           "isActive": false
         },
         {
@@ -268,17 +614,12 @@
         },
         {
           "Name": "Values",
+          "Projection": 7,
+          "isActive": false
+        },
+        {
+          "Name": "Values",
           "Projection": 4,
-          "isActive": false
-        },
-        {
-          "Name": "Values",
-          "Projection": 5,
-          "isActive": false
-        },
-        {
-          "Name": "Values",
-          "Projection": 6,
           "isActive": false
         }
       ]
@@ -286,28 +627,7 @@
   ],
   "selects": [
     {
-      "displayName": "TaskCode",
-      "queryName": "msdyn_projecttask.TaskCode",
-      "roles": {
-        "Values": true
-      },
-      "type": {
-        "category": null,
-        "underlyingType": 1
-      },
-      "expr": {
-        "Column": {
-          "Expression": {
-            "SourceRef": {
-              "Entity": "msdyn_projecttask"
-            }
-          },
-          "Property": "TaskCode"
-        }
-      }
-    },
-    {
-      "displayName": "Project Task Name",
+      "displayName": "Nombre",
       "queryName": "msdyn_projecttask.Project Task Name",
       "roles": {
         "Values": true
@@ -328,28 +648,7 @@
       }
     },
     {
-      "displayName": "statuscodename",
-      "queryName": "msdyn_projecttask.statuscodename",
-      "roles": {
-        "Values": true
-      },
-      "type": {
-        "category": null,
-        "underlyingType": 1
-      },
-      "expr": {
-        "Column": {
-          "Expression": {
-            "SourceRef": {
-              "Entity": "msdyn_projecttask"
-            }
-          },
-          "Property": "statuscodename"
-        }
-      }
-    },
-    {
-      "displayName": "PercentComplete",
+      "displayName": "% Avance",
       "format": "0",
       "queryName": "msdyn_projecttask.PercentComplete",
       "roles": {
@@ -371,7 +670,7 @@
       }
     },
     {
-      "displayName": "DueDateTexto",
+      "displayName": "Vencimiento",
       "queryName": "msdyn_projecttask.DueDateTexto",
       "roles": {
         "Values": true
@@ -392,7 +691,7 @@
       }
     },
     {
-      "displayName": "Ultima actualizacion",
+      "displayName": "Actualizado",
       "queryName": "msdyn_projecttask.Ultima actualizacion",
       "roles": {
         "Values": true
@@ -430,6 +729,150 @@
             }
           },
           "Property": "Responsable"
+        }
+      }
+    },
+    {
+      "displayName": "Estado",
+      "queryName": "msdyn_projecttask.Project Bucket",
+      "roles": {
+        "Values": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 1
+      },
+      "expr": {
+        "Column": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "Project Bucket"
+        }
+      }
+    },
+    {
+      "displayName": "Fecha inicio",
+      "queryName": "msdyn_projecttask.StartDateTexto",
+      "roles": {
+        "Values": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 1
+      },
+      "expr": {
+        "Column": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "StartDateTexto"
+        }
+      }
+    },
+    {
+      "displayName": "Atraso",
+      "format": "0",
+      "queryName": "msdyn_projecttask.Atraso",
+      "roles": {
+        "Values": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 260
+      },
+      "expr": {
+        "Column": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "Atraso"
+        }
+      }
+    },
+    {
+      "displayName": "Recuento de Atraso",
+      "queryName": "CountNonNull(msdyn_projecttask.Atraso)",
+      "roles": {},
+      "type": {
+        "category": null,
+        "underlyingType": 260
+      },
+      "expr": {
+        "Aggregation": {
+          "Expression": {
+            "Column": {
+              "Expression": {
+                "SourceRef": {
+                  "Entity": "msdyn_projecttask"
+                }
+              },
+              "Property": "Atraso"
+            }
+          },
+          "Function": 5
+        }
+      },
+      "relatedObjects": {
+        "values": {
+          "backColor": [
+            {
+              "data": [
+                {
+                  "dataViewWildcard": {
+                    "matchingOption": 1
+                  }
+                }
+              ],
+              "metadata": "msdyn_projecttask.Atraso"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "displayName": "Primera fecha: Project Bucket",
+      "queryName": "Min(msdyn_projecttask.Project Bucket)",
+      "roles": {},
+      "type": {
+        "category": null,
+        "underlyingType": 1
+      },
+      "expr": {
+        "Aggregation": {
+          "Expression": {
+            "Column": {
+              "Expression": {
+                "SourceRef": {
+                  "Entity": "msdyn_projecttask"
+                }
+              },
+              "Property": "Project Bucket"
+            }
+          },
+          "Function": 3
+        }
+      },
+      "relatedObjects": {
+        "values": {
+          "backColor": [
+            {
+              "data": [
+                {
+                  "dataViewWildcard": {
+                    "matchingOption": 1
+                  }
+                }
+              ],
+              "metadata": "msdyn_projecttask.Project Bucket"
+            }
+          ]
         }
       }
     }

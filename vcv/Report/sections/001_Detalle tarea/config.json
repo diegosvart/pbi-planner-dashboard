@@ -1,1 +1,17 @@
-{}
+{
+  "objects": {
+    "outspacePane": [
+      {
+        "properties": {
+          "width": {
+            "expr": {
+              "Literal": {
+                "Value": "238L"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}
