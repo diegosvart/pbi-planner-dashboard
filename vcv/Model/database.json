@@ -1470,6 +1470,31 @@
             "dataType": "string",
             "expression": "IF(msdyn_projecttask[HasUpdate], \"SI\", \"NO\")",
             "lineageTag": "b5d27c31-fd2d-48dc-b805-4ac0fa00e374"
+          },
+          {
+            "type": "calculated",
+            "name": "StartDateTexto",
+            "dataType": "string",
+            "expression": "FORMAT(msdyn_projecttask[Start Date], \"DD/MM/YYYY\")",
+            "lineageTag": "4135bd14-c007-4c33-9b64-6f3afcffe5f0",
+            "summarizeBy": "none"
+          },
+          {
+            "type": "calculated",
+            "name": "Atraso",
+            "dataType": "int64",
+            "expression": [
+              "IF(",
+              "    msdyn_projecttask[Project Bucket] = \"In Progress\"",
+              "        && NOT(ISBLANK(msdyn_projecttask[Due Date]))",
+              "        && msdyn_projecttask[Due Date] < TODAY(),",
+              "    DATEDIFF(msdyn_projecttask[Due Date], TODAY(), DAY),",
+              "    BLANK()",
+              ")"
+            ],
+            "formatString": "0",
+            "lineageTag": "e41d1699-cdb2-4e6e-b6fa-7f3137aa0b53",
+            "summarizeBy": "none"
           }
         ],
         "partitions": [
@@ -1786,6 +1811,33 @@
               "    )"
             ],
             "lineageTag": "d548e1e4-14e9-4cce-b675-16eb72d05ebc"
+          },
+          {
+            "name": "NombreProyecto",
+            "expression": [
+              "VAR ParentCode =",
+              "    CALCULATE(",
+              "        SELECTEDVALUE(msdyn_projecttask[ParentTaskCode]),",
+              "        REMOVEFILTERS(msdyn_projecttask[TaskCode]),",
+              "        REMOVEFILTERS(msdyn_projecttask[IsParentTask])",
+              "    )",
+              "RETURN",
+              "    IF(",
+              "        ISBLANK(ParentCode),",
+              "        BLANK(),",
+              "        CALCULATE(",
+              "            SELECTEDVALUE(msdyn_projecttask[Project Task Name]),",
+              "            ALL(msdyn_projecttask),",
+              "            msdyn_projecttask[TaskCode] = ParentCode",
+              "        )",
+              "    )"
+            ],
+            "lineageTag": "41fdef72-1b50-4a9f-8ac0-e704c1f551fe"
+          },
+          {
+            "name": "NotasTarea",
+            "expression": "SELECTEDVALUE(msdyn_projecttask[Notes - Plain text], \"\")",
+            "lineageTag": "f9dc0dc7-bed0-44bd-b795-1ce6692271a0"
           }
         ],
         "annotations": [
@@ -14808,6 +14860,16 @@
                       },
                       "Weight": 0.9
                     }
+                  },
+                  {
+                    "Nombre": {
+                      "State": "Suggested",
+                      "Source": {
+                        "Type": "External",
+                        "Agent": "PowerBI.VisualColumnRename"
+                      },
+                      "Weight": 0.9
+                    }
                   }
                 ]
               },
@@ -18643,6 +18705,16 @@
                       },
                       "Weight": 0.5
                     }
+                  },
+                  {
+                    "Estado": {
+                      "State": "Suggested",
+                      "Source": {
+                        "Type": "External",
+                        "Agent": "PowerBI.VisualColumnRename"
+                      },
+                      "Weight": 0.9
+                    }
                   }
                 ]
               },
@@ -20115,16 +20187,6 @@
                       "State": "Generated",
                       "Weight": 0.97
                     }
-                  },
-                  {
-                    "Actualizado": {
-                      "State": "Suggested",
-                      "Source": {
-                        "Type": "External",
-                        "Agent": "PowerBI.VisualColumnRename"
-                      },
-                      "Weight": 0.9
-                    }
                   }
                 ]
               },
@@ -21044,6 +21106,16 @@
                   },
                   {
                     "Última actualizacion": {
+                      "State": "Suggested",
+                      "Source": {
+                        "Type": "External",
+                        "Agent": "PowerBI.VisualColumnRename"
+                      },
+                      "Weight": 0.9
+                    }
+                  },
+                  {
+                    "Actualizado": {
                       "State": "Suggested",
                       "Source": {
                         "Type": "External",
@@ -41964,6 +42036,201 @@
                     }
                   }
                 ]
+              },
+              "msdyn_projecttask.start_date_texto": {
+                "Definition": {
+                  "Binding": {
+                    "ConceptualEntity": "msdyn_projecttask",
+                    "ConceptualProperty": "StartDateTexto"
+                  }
+                },
+                "State": "Generated",
+                "Terms": [
+                  {
+                    "start date texto": {
+                      "State": "Generated"
+                    }
+                  },
+                  {
+                    "StartDateTexto": {
+                      "Type": "Noun",
+                      "State": "Generated",
+                      "Weight": 0.99
+                    }
+                  },
+                  {
+                    "commencement date texto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.615
+                    }
+                  },
+                  {
+                    "inception date texto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.615
+                    }
+                  },
+                  {
+                    "kickoff date texto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.615
+                    }
+                  },
+                  {
+                    "start moment texto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.609
+                    }
+                  },
+                  {
+                    "beginning date texto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.597
+                    }
+                  },
+                  {
+                    "first date texto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.597
+                    }
+                  },
+                  {
+                    "initiation date texto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.597
+                    }
+                  },
+                  {
+                    "launch date texto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.597
+                    }
+                  },
+                  {
+                    "start period texto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.591
+                    }
+                  },
+                  {
+                    "kick off date texto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.484
+                    }
+                  },
+                  {
+                    "Fecha inicio": {
+                      "State": "Suggested",
+                      "Source": {
+                        "Type": "External",
+                        "Agent": "PowerBI.VisualColumnRename"
+                      },
+                      "Weight": 0.9
+                    }
+                  }
+                ]
+              },
+              "msdyn_projecttask.atraso": {
+                "Definition": {
+                  "Binding": {
+                    "ConceptualEntity": "msdyn_projecttask",
+                    "ConceptualProperty": "Atraso"
+                  }
+                },
+                "State": "Generated",
+                "Terms": [
+                  {
+                    "atraso": {
+                      "State": "Generated"
+                    }
+                  }
+                ]
+              },
+              "msdyn_projecttask.nombre_proyecto": {
+                "Definition": {
+                  "Binding": {
+                    "ConceptualEntity": "msdyn_projecttask",
+                    "ConceptualProperty": "NombreProyecto"
+                  }
+                },
+                "State": "Generated",
+                "Terms": [
+                  {
+                    "nombre proyecto": {
+                      "State": "Generated"
+                    }
+                  },
+                  {
+                    "NombreProyecto": {
+                      "Type": "Noun",
+                      "State": "Generated",
+                      "Weight": 0.99
+                    }
+                  }
+                ]
+              },
+              "msdyn_projecttask.notas_tarea": {
+                "Definition": {
+                  "Binding": {
+                    "ConceptualEntity": "msdyn_projecttask",
+                    "ConceptualProperty": "NotasTarea"
+                  }
+                },
+                "State": "Generated",
+                "Terms": [
+                  {
+                    "notas tarea": {
+                      "State": "Generated"
+                    }
+                  },
+                  {
+                    "NotasTarea": {
+                      "Type": "Noun",
+                      "State": "Generated",
+                      "Weight": 0.99
+                    }
+                  }
+                ]
               }
             },
             "Relationships": {
@@ -51448,6 +51715,138 @@
                     "State": "Generated",
                     "Weight": 0.99,
                     "ID": "msdyn_projectgoals_have_msdyn_projecttasktogoals"
+                  }
+                ]
+              },
+              "msdyn_projecttask_has_notas_tarea": {
+                "Binding": {
+                  "ConceptualEntity": "msdyn_projecttask"
+                },
+                "State": "Generated",
+                "Roles": {
+                  "msdyn_projecttask": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask"
+                    }
+                  },
+                  "msdyn_projecttask.notas_tarea": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask.notas_tarea"
+                    }
+                  }
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projecttask"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projecttask.notas_tarea"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "msdyn_projecttasks_have_notas_tarea"
+                  }
+                ]
+              },
+              "msdyn_projecttask_has_nombre_proyecto": {
+                "Binding": {
+                  "ConceptualEntity": "msdyn_projecttask"
+                },
+                "State": "Generated",
+                "Roles": {
+                  "msdyn_projecttask": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask"
+                    }
+                  },
+                  "msdyn_projecttask.nombre_proyecto": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask.nombre_proyecto"
+                    }
+                  }
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projecttask"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projecttask.nombre_proyecto"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "msdyn_projecttasks_have_nombre_proyecto"
+                  }
+                ]
+              },
+              "msdyn_projecttask_has_atraso": {
+                "Binding": {
+                  "ConceptualEntity": "msdyn_projecttask"
+                },
+                "State": "Generated",
+                "Roles": {
+                  "msdyn_projecttask": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask"
+                    }
+                  },
+                  "msdyn_projecttask.atraso": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask.atraso"
+                    }
+                  }
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projecttask"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projecttask.atraso"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "msdyn_projecttasks_have_atrasos"
+                  }
+                ]
+              },
+              "msdyn_projecttask_has_start_date_texto": {
+                "Binding": {
+                  "ConceptualEntity": "msdyn_projecttask"
+                },
+                "State": "Generated",
+                "Roles": {
+                  "msdyn_projecttask": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask"
+                    }
+                  },
+                  "msdyn_projecttask.start_date_texto": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask.start_date_texto"
+                    }
+                  }
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projecttask"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projecttask.start_date_texto"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "msdyn_projecttasks_have_start_date_textos"
                   }
                 ]
               },

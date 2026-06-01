@@ -19,34 +19,10 @@
                     "Source": "m"
                   }
                 },
-                "Property": "TaskCode"
-              },
-              "Name": "msdyn_projecttask.TaskCode",
-              "NativeReferenceName": "TaskCode"
-            },
-            {
-              "Column": {
-                "Expression": {
-                  "SourceRef": {
-                    "Source": "m"
-                  }
-                },
                 "Property": "Project Task Name"
               },
               "Name": "msdyn_projecttask.Project Task Name",
-              "NativeReferenceName": "Project Task Name"
-            },
-            {
-              "Column": {
-                "Expression": {
-                  "SourceRef": {
-                    "Source": "m"
-                  }
-                },
-                "Property": "statuscodename"
-              },
-              "Name": "msdyn_projecttask.statuscodename",
-              "NativeReferenceName": "statuscodename"
+              "NativeReferenceName": "Nombre"
             },
             {
               "Column": {
@@ -58,7 +34,7 @@
                 "Property": "PercentComplete"
               },
               "Name": "msdyn_projecttask.PercentComplete",
-              "NativeReferenceName": "PercentComplete"
+              "NativeReferenceName": "% Avance"
             },
             {
               "Column": {
@@ -70,7 +46,7 @@
                 "Property": "DueDateTexto"
               },
               "Name": "msdyn_projecttask.DueDateTexto",
-              "NativeReferenceName": "DueDateTexto"
+              "NativeReferenceName": "Vencimiento"
             },
             {
               "Measure": {
@@ -82,7 +58,7 @@
                 "Property": "Ultima actualizacion"
               },
               "Name": "msdyn_projecttask.Ultima actualizacion",
-              "NativeReferenceName": "Ultima actualizacion"
+              "NativeReferenceName": "Actualizado"
             },
             {
               "Measure": {
@@ -95,6 +71,74 @@
               },
               "Name": "msdyn_projecttask.Responsable",
               "NativeReferenceName": "Responsable"
+            },
+            {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Source": "m"
+                  }
+                },
+                "Property": "Project Bucket"
+              },
+              "Name": "msdyn_projecttask.Project Bucket",
+              "NativeReferenceName": "Estado"
+            },
+            {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Source": "m"
+                  }
+                },
+                "Property": "StartDateTexto"
+              },
+              "Name": "msdyn_projecttask.StartDateTexto",
+              "NativeReferenceName": "Fecha inicio"
+            },
+            {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Source": "m"
+                  }
+                },
+                "Property": "Atraso"
+              },
+              "Name": "msdyn_projecttask.Atraso",
+              "NativeReferenceName": "Atraso"
+            },
+            {
+              "Aggregation": {
+                "Expression": {
+                  "Column": {
+                    "Expression": {
+                      "SourceRef": {
+                        "Source": "m"
+                      }
+                    },
+                    "Property": "Atraso"
+                  }
+                },
+                "Function": 5
+              },
+              "Name": "CountNonNull(msdyn_projecttask.Atraso)"
+            },
+            {
+              "Aggregation": {
+                "Expression": {
+                  "Column": {
+                    "Expression": {
+                      "SourceRef": {
+                        "Source": "m"
+                      }
+                    },
+                    "Property": "Project Bucket"
+                  }
+                },
+                "Function": 3
+              },
+              "Name": "Min(msdyn_projecttask.Project Bucket)"
             }
           ],
           "Where": [
@@ -165,7 +209,10 @@
                   3,
                   4,
                   5,
-                  6
+                  6,
+                  7,
+                  8,
+                  9
                 ]
               }
             ]
@@ -178,6 +225,10 @@
               }
             }
           },
+          "SuppressedJoinPredicates": [
+            8,
+            9
+          ],
           "Version": 1
         },
         "ExecutionMetricsKind": 1

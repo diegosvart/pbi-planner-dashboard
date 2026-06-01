@@ -13,46 +13,19 @@
           ],
           "Select": [
             {
-              "Column": {
+              "Measure": {
                 "Expression": {
                   "SourceRef": {
                     "Source": "m"
                   }
                 },
-                "Property": "Project Task Name"
+                "Property": "NombreProyecto"
               },
-              "Name": "msdyn_projecttask.Project Task Name",
-              "NativeReferenceName": "Project Task Name"
+              "Name": "msdyn_projecttask.NombreProyecto",
+              "NativeReferenceName": "Nombre proyecto"
             }
           ],
           "Where": [
-            {
-              "Condition": {
-                "In": {
-                  "Expressions": [
-                    {
-                      "Column": {
-                        "Expression": {
-                          "SourceRef": {
-                            "Source": "m"
-                          }
-                        },
-                        "Property": "IsParentTask"
-                      }
-                    }
-                  ],
-                  "Values": [
-                    [
-                      {
-                        "Literal": {
-                          "Value": "true"
-                        }
-                      }
-                    ]
-                  ]
-                }
-              }
-            },
             {
               "Condition": {
                 "In": {
@@ -89,23 +62,6 @@
                 "Projections": [
                   0
                 ]
-              }
-            ]
-          },
-          "DataReduction": {
-            "DataVolume": 3,
-            "Scoped": [
-              {
-                "Scope": {
-                  "Primary": [
-                    0
-                  ]
-                },
-                "Algorithm": {
-                  "Window": {
-                    "Count": 20
-                  }
-                }
               }
             ]
           },
