@@ -1,0 +1,87 @@
+{
+  "name": "0ec6e226ac380690d306",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 63.567936680375574,
+        "y": 52.125708077907966,
+        "z": 1000,
+        "width": 545.4128967176224,
+        "height": 123.32179715992861,
+        "tabOrder": 1000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "cardVisual",
+    "projections": {
+      "Rows": [
+        {
+          "queryRef": "msdyn_projecttask.Project Task Name"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "m",
+          "Entity": "msdyn_projecttask",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "Project Task Name"
+          },
+          "Name": "msdyn_projecttask.Project Task Name",
+          "NativeReferenceName": "Project Task Name"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Nombre Tarea / Proyecto'"
+                }
+              }
+            },
+            "bold": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "alignment": {
+              "expr": {
+                "Literal": {
+                  "Value": "'center'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

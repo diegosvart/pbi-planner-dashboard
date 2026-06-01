@@ -29,7 +29,7 @@
     "projections": {
       "Values": [
         {
-          "queryRef": "msdyn_projecttask.TaskCode"
+          "queryRef": "msdyn_projecttask.ParentTaskCode"
         },
         {
           "queryRef": "msdyn_projecttask.Project Task Name"
@@ -64,18 +64,6 @@
         }
       ],
       "Select": [
-        {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Source": "m"
-              }
-            },
-            "Property": "TaskCode"
-          },
-          "Name": "msdyn_projecttask.TaskCode",
-          "NativeReferenceName": "Código"
-        },
         {
           "Column": {
             "Expression": {
@@ -159,6 +147,18 @@
           },
           "Name": "msdyn_projecttask.Actualizado",
           "NativeReferenceName": "Actualizado"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "ParentTaskCode"
+          },
+          "Name": "msdyn_projecttask.ParentTaskCode",
+          "NativeReferenceName": "ParentTaskCode"
         }
       ]
     },
@@ -177,9 +177,6 @@
       },
       "msdyn_projecttask.Project Task Name": {
         "displayName": "Nombre Proyecto"
-      },
-      "msdyn_projecttask.TaskCode": {
-        "displayName": "Código"
       }
     },
     "drillFilterOtherVisuals": true,

@@ -1,0 +1,193 @@
+{
+  "name": "4bd08b0e93573c144dc0",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 77.379909663901628,
+        "y": 240.58117368231234,
+        "z": 2000,
+        "width": 1150.8502928194823,
+        "height": 393.934085561681,
+        "tabOrder": 2000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "msdyn_projecttask.TaskCode"
+        },
+        {
+          "queryRef": "msdyn_projecttask.Project Task Name"
+        },
+        {
+          "queryRef": "msdyn_projecttask.statuscodename"
+        },
+        {
+          "queryRef": "msdyn_projecttask.PercentComplete"
+        },
+        {
+          "queryRef": "msdyn_projecttask.DueDateTexto"
+        },
+        {
+          "queryRef": "msdyn_projecttask.Ultima actualizacion"
+        },
+        {
+          "queryRef": "msdyn_projecttask.Responsable"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "m",
+          "Entity": "msdyn_projecttask",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "TaskCode"
+          },
+          "Name": "msdyn_projecttask.TaskCode",
+          "NativeReferenceName": "TaskCode"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "Project Task Name"
+          },
+          "Name": "msdyn_projecttask.Project Task Name",
+          "NativeReferenceName": "Project Task Name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "statuscodename"
+          },
+          "Name": "msdyn_projecttask.statuscodename",
+          "NativeReferenceName": "statuscodename"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "PercentComplete"
+          },
+          "Name": "msdyn_projecttask.PercentComplete",
+          "NativeReferenceName": "PercentComplete"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "DueDateTexto"
+          },
+          "Name": "msdyn_projecttask.DueDateTexto",
+          "NativeReferenceName": "DueDateTexto"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "Ultima actualizacion"
+          },
+          "Name": "msdyn_projecttask.Ultima actualizacion",
+          "NativeReferenceName": "Ultima actualizacion"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "Responsable"
+          },
+          "Name": "msdyn_projecttask.Responsable",
+          "NativeReferenceName": "Responsable"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "filterSortOrder": 3,
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Detalle Tareas / Proyectos'"
+                }
+              }
+            },
+            "alignment": {
+              "expr": {
+                "Literal": {
+                  "Value": "'center'"
+                }
+              }
+            },
+            "bold": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

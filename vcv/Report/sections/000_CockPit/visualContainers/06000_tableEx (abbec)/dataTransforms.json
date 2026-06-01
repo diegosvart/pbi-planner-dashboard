@@ -1,0 +1,482 @@
+{
+  "objects": {
+    "columnHeaders": [
+      {
+        "properties": {}
+      }
+    ],
+    "total": [
+      {
+        "properties": {
+          "totals": {
+            "expr": {
+              "Literal": {
+                "Value": "false"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "projectionOrdering": {
+    "Values": [
+      7,
+      0,
+      1,
+      6,
+      5,
+      4,
+      2,
+      3
+    ]
+  },
+  "queryMetadata": {
+    "Select": [
+      {
+        "Restatement": "Nombre Proyecto",
+        "Name": "msdyn_projecttask.Project Task Name",
+        "Type": 2048
+      },
+      {
+        "Restatement": "Responsable",
+        "Name": "msdyn_projecttask.Responsable Principal",
+        "Type": 2048
+      },
+      {
+        "Restatement": "Días de retraso",
+        "Name": "msdyn_projecttask.DaysOverdue",
+        "Type": 3,
+        "Format": "0"
+      },
+      {
+        "Restatement": "Última actualizacion",
+        "Name": "msdyn_projecttask.Ultima actualizacion",
+        "Type": 2048
+      },
+      {
+        "Restatement": "Vencimiento",
+        "Name": "msdyn_projecttask.DueDateTexto",
+        "Type": 2048
+      },
+      {
+        "Restatement": "% Avance",
+        "Name": "msdyn_projecttask.PercentComplete",
+        "Type": 1,
+        "Format": "0"
+      },
+      {
+        "Restatement": "Actualizado",
+        "Name": "msdyn_projecttask.Actualizado",
+        "Type": 2048
+      },
+      {
+        "Restatement": "ParentTaskCode",
+        "Name": "msdyn_projecttask.ParentTaskCode",
+        "Type": 2048
+      }
+    ],
+    "Filters": [
+      {
+        "type": 2,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "DaysOverdue"
+          }
+        }
+      },
+      {
+        "type": 0,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "DueDateTexto"
+          }
+        }
+      },
+      {
+        "type": 0,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "IsLive"
+          }
+        }
+      },
+      {
+        "type": 0,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "Project Task Name"
+          }
+        }
+      },
+      {
+        "type": 0,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "IsParentTask"
+          }
+        }
+      },
+      {
+        "type": 2,
+        "expression": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "Responsable"
+          }
+        }
+      },
+      {
+        "type": 0,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "Status"
+          }
+        }
+      },
+      {
+        "type": 0,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "TaskCode"
+          }
+        }
+      },
+      {
+        "type": 2,
+        "expression": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "Total Tareas"
+          }
+        }
+      },
+      {
+        "type": 2,
+        "expression": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "Ultima actualizacion"
+          }
+        }
+      },
+      {
+        "type": 2,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "PercentComplete"
+          }
+        }
+      },
+      {
+        "type": 0,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "Estado Padre"
+          }
+        }
+      },
+      {
+        "type": 0,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "Actualizado"
+          }
+        }
+      },
+      {
+        "type": 0,
+        "expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "msdyn_projecttask"
+              }
+            },
+            "Property": "ParentTaskCode"
+          }
+        }
+      }
+    ]
+  },
+  "visualElements": [
+    {
+      "DataRoles": [
+        {
+          "Name": "Values",
+          "Projection": 7,
+          "isActive": false
+        },
+        {
+          "Name": "Values",
+          "Projection": 0,
+          "isActive": false
+        },
+        {
+          "Name": "Values",
+          "Projection": 1,
+          "isActive": false
+        },
+        {
+          "Name": "Values",
+          "Projection": 6,
+          "isActive": false
+        },
+        {
+          "Name": "Values",
+          "Projection": 5,
+          "isActive": false
+        },
+        {
+          "Name": "Values",
+          "Projection": 4,
+          "isActive": false
+        },
+        {
+          "Name": "Values",
+          "Projection": 2,
+          "isActive": false
+        },
+        {
+          "Name": "Values",
+          "Projection": 3,
+          "isActive": false
+        }
+      ]
+    }
+  ],
+  "selects": [
+    {
+      "displayName": "Nombre Proyecto",
+      "queryName": "msdyn_projecttask.Project Task Name",
+      "roles": {
+        "Values": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 1
+      },
+      "expr": {
+        "Column": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "Project Task Name"
+        }
+      }
+    },
+    {
+      "displayName": "Responsable",
+      "queryName": "msdyn_projecttask.Responsable Principal",
+      "roles": {
+        "Values": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 1
+      },
+      "expr": {
+        "Measure": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "Responsable"
+        }
+      }
+    },
+    {
+      "displayName": "Días de retraso",
+      "format": "0",
+      "queryName": "msdyn_projecttask.DaysOverdue",
+      "roles": {
+        "Values": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 260
+      },
+      "expr": {
+        "Column": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "DaysOverdue"
+        }
+      }
+    },
+    {
+      "displayName": "Última actualizacion",
+      "queryName": "msdyn_projecttask.Ultima actualizacion",
+      "roles": {
+        "Values": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 1
+      },
+      "expr": {
+        "Measure": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "Ultima actualizacion"
+        }
+      }
+    },
+    {
+      "displayName": "Vencimiento",
+      "queryName": "msdyn_projecttask.DueDateTexto",
+      "roles": {
+        "Values": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 1
+      },
+      "expr": {
+        "Column": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "DueDateTexto"
+        }
+      }
+    },
+    {
+      "displayName": "% Avance",
+      "format": "0",
+      "queryName": "msdyn_projecttask.PercentComplete",
+      "roles": {
+        "Values": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 259
+      },
+      "expr": {
+        "Column": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "PercentComplete"
+        }
+      }
+    },
+    {
+      "displayName": "Actualizado",
+      "queryName": "msdyn_projecttask.Actualizado",
+      "roles": {
+        "Values": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 1
+      },
+      "expr": {
+        "Column": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "Actualizado"
+        }
+      }
+    },
+    {
+      "displayName": "ParentTaskCode",
+      "queryName": "msdyn_projecttask.ParentTaskCode",
+      "roles": {
+        "Values": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 1
+      },
+      "expr": {
+        "Column": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "ParentTaskCode"
+        }
+      }
+    }
+  ]
+}

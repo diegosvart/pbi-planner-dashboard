@@ -4,9 +4,9 @@
   "pods": [
     {
       "boundSection": "ff051d8d6a4bff48188b",
-      "config": "{}",
-      "name": "f7714a0028e31e8b7379",
-      "parameters": "[{\"name\":\"8cefeb2389569cc90500\",\"boundFilter\":\"53a78f0305700e04a121\",\"fieldExpr\":{\"Column\":{\"Expression\":{\"SourceRef\":{\"Entity\":\"msdyn_projecttask\"}},\"Property\":\"TaskCode\"}}}]",
+      "config": "{\"acceptsFilterContext\":1}",
+      "name": "68ccda12d60109d23003",
+      "parameters": "[{\"name\":\"9a83580d82104156419a\",\"boundFilter\":\"b28ad33d2a3a67909837\",\"fieldExpr\":{\"Column\":{\"Expression\":{\"SourceRef\":{\"Entity\":\"msdyn_projecttask\"}},\"Property\":\"ParentTaskCode\"}}}]",
       "type": 1
     }
   ],
