@@ -1838,6 +1838,46 @@
             "name": "NotasTarea",
             "expression": "SELECTEDVALUE(msdyn_projecttask[Notes - Plain text], \"\")",
             "lineageTag": "f9dc0dc7-bed0-44bd-b795-1ce6692271a0"
+          },
+          {
+            "name": "TareasFinalizadas",
+            "expression": [
+              "VAR Total = CALCULATE(",
+              "    COUNTROWS(msdyn_projecttask),",
+              "    REMOVEFILTERS(msdyn_projecttask[TaskCode]),",
+              "    msdyn_projecttask[IsParentTask] = FALSE()",
+              ")",
+              "VAR Done = CALCULATE(",
+              "    COUNTROWS(msdyn_projecttask),",
+              "    REMOVEFILTERS(msdyn_projecttask[TaskCode]),",
+              "    msdyn_projecttask[IsParentTask] = FALSE(),",
+              "    msdyn_projecttask[PercentComplete] >= 100",
+              ")",
+              "RETURN IF(Total = 0, BLANK(), Done & \"/\" & Total)"
+            ],
+            "displayFolder": "Indicadores",
+            "lineageTag": "e5776f7f-4a9b-4dde-97fb-56098e4bb368"
+          },
+          {
+            "name": "% Avance Proyecto",
+            "expression": [
+              "CALCULATE(",
+              "    AVERAGEX(",
+              "        FILTER(msdyn_projecttask, msdyn_projecttask[IsParentTask] = FALSE()),",
+              "        msdyn_projecttask[PercentComplete]",
+              "    ),",
+              "    REMOVEFILTERS(msdyn_projecttask[TaskCode])",
+              ")"
+            ],
+            "formatString": "0.0",
+            "displayFolder": "Indicadores",
+            "lineageTag": "ff350990-e402-4069-81b8-dea7f8a78c8c"
+          },
+          {
+            "name": "_Gauge Max",
+            "expression": "100",
+            "displayFolder": "Indicadores",
+            "lineageTag": "62abdea8-42ad-43bf-a546-c1e2f454dffd"
           }
         ],
         "annotations": [
@@ -11963,16 +12003,6 @@
                       },
                       "Weight": 0.727
                     }
-                  },
-                  {
-                    "Código": {
-                      "State": "Suggested",
-                      "Source": {
-                        "Type": "External",
-                        "Agent": "PowerBI.VisualColumnRename"
-                      },
-                      "Weight": 0.9
-                    }
                   }
                 ]
               },
@@ -12078,6 +12108,16 @@
                         "Agent": "Thesaurus"
                       },
                       "Weight": 0.452
+                    }
+                  },
+                  {
+                    "Categorías": {
+                      "State": "Suggested",
+                      "Source": {
+                        "Type": "External",
+                        "Agent": "PowerBI.VisualColumnRename"
+                      },
+                      "Weight": 0.9
                     }
                   }
                 ]
@@ -42231,207 +42271,94 @@
                     }
                   }
                 ]
+              },
+              "msdyn_projecttask.tareas_finalizadas": {
+                "Definition": {
+                  "Binding": {
+                    "ConceptualEntity": "msdyn_projecttask",
+                    "ConceptualProperty": "TareasFinalizadas"
+                  }
+                },
+                "State": "Generated",
+                "Terms": [
+                  {
+                    "tareas finalizadas": {
+                      "State": "Generated"
+                    }
+                  },
+                  {
+                    "TareasFinalizadas": {
+                      "Type": "Noun",
+                      "State": "Generated",
+                      "Weight": 0.99
+                    }
+                  }
+                ]
+              },
+              "msdyn_projecttask.avance_proyecto": {
+                "Definition": {
+                  "Binding": {
+                    "ConceptualEntity": "msdyn_projecttask",
+                    "ConceptualProperty": "% Avance Proyecto"
+                  }
+                },
+                "State": "Generated",
+                "Terms": [
+                  {
+                    "% avance proyecto": {
+                      "State": "Generated"
+                    }
+                  },
+                  {
+                    "percentage avance proyecto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.609
+                    }
+                  },
+                  {
+                    "pct avance proyecto": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.591
+                    }
+                  }
+                ]
+              },
+              "msdyn_projecttask.entity__gauge_max": {
+                "Definition": {
+                  "Binding": {
+                    "ConceptualEntity": "msdyn_projecttask",
+                    "ConceptualProperty": "_Gauge Max"
+                  }
+                },
+                "State": "Generated",
+                "Terms": [
+                  {
+                    "_gauge max": {
+                      "State": "Generated"
+                    }
+                  },
+                  {
+                    "_gauge maximum": {
+                      "Type": "Noun",
+                      "State": "Suggested",
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "Weight": 0.739
+                    }
+                  }
+                ]
               }
             },
             "Relationships": {
-              "msdyn_projectgoal_end_date_me_has_msdyn_projectgoal_end_date_día": {
-                "Binding": {
-                  "ConceptualEntity": "msdyn_projectgoal"
-                },
-                "State": "Generated",
-                "Roles": {
-                  "msdyn_projectgoal.end_date.me": {
-                    "Target": {
-                      "Entity": "msdyn_projectgoal.end_date.me"
-                    }
-                  },
-                  "msdyn_projectgoal.end_date.día": {
-                    "Target": {
-                      "Entity": "msdyn_projectgoal.end_date.día"
-                    }
-                  }
-                },
-                "Phrasings": [
-                  {
-                    "Attribute": {
-                      "Subject": {
-                        "Role": "msdyn_projectgoal.end_date.me"
-                      },
-                      "Object": {
-                        "Role": "msdyn_projectgoal.end_date.día"
-                      }
-                    },
-                    "State": "Generated",
-                    "Weight": 0.99,
-                    "ID": "me_have_días"
-                  },
-                  {
-                    "Attribute": {
-                      "Subject": {
-                        "Role": "msdyn_projectgoal.end_date.día"
-                      },
-                      "Object": {
-                        "Role": "msdyn_projectgoal.end_date.me"
-                      }
-                    },
-                    "State": "Generated",
-                    "Weight": 0.99,
-                    "ID": "días_have_me"
-                  },
-                  {
-                    "Preposition": {
-                      "Subject": {
-                        "Role": "msdyn_projectgoal.end_date.día"
-                      },
-                      "Prepositions": [
-                        {
-                          "in": {
-                            "State": "Generated"
-                          }
-                        }
-                      ],
-                      "Object": {
-                        "Role": "msdyn_projectgoal.end_date.me"
-                      }
-                    },
-                    "State": "Generated",
-                    "Weight": 0.99,
-                    "ID": "días_are_in_me25"
-                  }
-                ]
-              },
-              "msdyn_projectgoal_end_date_trimestre_has_msdyn_projectgoal_end_date_me": {
-                "Binding": {
-                  "ConceptualEntity": "msdyn_projectgoal"
-                },
-                "State": "Generated",
-                "Roles": {
-                  "msdyn_projectgoal.end_date.trimestre": {
-                    "Target": {
-                      "Entity": "msdyn_projectgoal.end_date.trimestre"
-                    }
-                  },
-                  "msdyn_projectgoal.end_date.me": {
-                    "Target": {
-                      "Entity": "msdyn_projectgoal.end_date.me"
-                    }
-                  }
-                },
-                "Phrasings": [
-                  {
-                    "Attribute": {
-                      "Subject": {
-                        "Role": "msdyn_projectgoal.end_date.trimestre"
-                      },
-                      "Object": {
-                        "Role": "msdyn_projectgoal.end_date.me"
-                      }
-                    },
-                    "State": "Generated",
-                    "Weight": 0.99,
-                    "ID": "trimestres_have_me"
-                  },
-                  {
-                    "Attribute": {
-                      "Subject": {
-                        "Role": "msdyn_projectgoal.end_date.me"
-                      },
-                      "Object": {
-                        "Role": "msdyn_projectgoal.end_date.trimestre"
-                      }
-                    },
-                    "State": "Generated",
-                    "Weight": 0.99,
-                    "ID": "me_have_trimestres"
-                  },
-                  {
-                    "Preposition": {
-                      "Subject": {
-                        "Role": "msdyn_projectgoal.end_date.me"
-                      },
-                      "Prepositions": [
-                        {
-                          "in": {
-                            "State": "Generated"
-                          }
-                        }
-                      ],
-                      "Object": {
-                        "Role": "msdyn_projectgoal.end_date.trimestre"
-                      }
-                    },
-                    "State": "Generated",
-                    "Weight": 0.99,
-                    "ID": "me_are_in_trimestres25"
-                  }
-                ]
-              },
-              "msdyn_projectgoal_end_date_año_has_msdyn_projectgoal_end_date_trimestre": {
-                "Binding": {
-                  "ConceptualEntity": "msdyn_projectgoal"
-                },
-                "State": "Generated",
-                "Roles": {
-                  "msdyn_projectgoal.end_date.año": {
-                    "Target": {
-                      "Entity": "msdyn_projectgoal.end_date.año"
-                    }
-                  },
-                  "msdyn_projectgoal.end_date.trimestre": {
-                    "Target": {
-                      "Entity": "msdyn_projectgoal.end_date.trimestre"
-                    }
-                  }
-                },
-                "Phrasings": [
-                  {
-                    "Attribute": {
-                      "Subject": {
-                        "Role": "msdyn_projectgoal.end_date.año"
-                      },
-                      "Object": {
-                        "Role": "msdyn_projectgoal.end_date.trimestre"
-                      }
-                    },
-                    "State": "Generated",
-                    "Weight": 0.99,
-                    "ID": "años_have_trimestres"
-                  },
-                  {
-                    "Attribute": {
-                      "Subject": {
-                        "Role": "msdyn_projectgoal.end_date.trimestre"
-                      },
-                      "Object": {
-                        "Role": "msdyn_projectgoal.end_date.año"
-                      }
-                    },
-                    "State": "Generated",
-                    "Weight": 0.99,
-                    "ID": "trimestres_have_años"
-                  },
-                  {
-                    "Preposition": {
-                      "Subject": {
-                        "Role": "msdyn_projectgoal.end_date.trimestre"
-                      },
-                      "Prepositions": [
-                        {
-                          "in": {
-                            "State": "Generated"
-                          }
-                        }
-                      ],
-                      "Object": {
-                        "Role": "msdyn_projectgoal.end_date.año"
-                      }
-                    },
-                    "State": "Generated",
-                    "Weight": 0.99,
-                    "ID": "trimestres_are_in_años25"
-                  }
-                ]
-              },
               "msdyn_projectgoal_end_date_jerarquía_de_fecha_has_msdyn_projectgoal_end_date_día": {
                 "Binding": {
                   "ConceptualEntity": "msdyn_projectgoal"
@@ -42626,7 +42553,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días1"
+                    "ID": "me_have_días"
                   },
                   {
                     "Attribute": {
@@ -42639,7 +42566,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me1"
+                    "ID": "días_have_me"
                   },
                   {
                     "Preposition": {
@@ -42692,7 +42619,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me1"
+                    "ID": "trimestres_have_me"
                   },
                   {
                     "Attribute": {
@@ -42705,7 +42632,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres1"
+                    "ID": "me_have_trimestres"
                   },
                   {
                     "Preposition": {
@@ -42758,7 +42685,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres1"
+                    "ID": "años_have_trimestres"
                   },
                   {
                     "Attribute": {
@@ -42771,7 +42698,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años1"
+                    "ID": "trimestres_have_años"
                   },
                   {
                     "Preposition": {
@@ -42989,7 +42916,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días2"
+                    "ID": "me_have_días1"
                   },
                   {
                     "Attribute": {
@@ -43002,7 +42929,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me2"
+                    "ID": "días_have_me1"
                   },
                   {
                     "Preposition": {
@@ -43055,7 +42982,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me2"
+                    "ID": "trimestres_have_me1"
                   },
                   {
                     "Attribute": {
@@ -43068,7 +42995,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres2"
+                    "ID": "me_have_trimestres1"
                   },
                   {
                     "Preposition": {
@@ -43121,7 +43048,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres2"
+                    "ID": "años_have_trimestres1"
                   },
                   {
                     "Attribute": {
@@ -43134,7 +43061,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años2"
+                    "ID": "trimestres_have_años1"
                   },
                   {
                     "Preposition": {
@@ -43352,7 +43279,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días3"
+                    "ID": "me_have_días2"
                   },
                   {
                     "Attribute": {
@@ -43365,7 +43292,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me3"
+                    "ID": "días_have_me2"
                   },
                   {
                     "Preposition": {
@@ -43418,7 +43345,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me3"
+                    "ID": "trimestres_have_me2"
                   },
                   {
                     "Attribute": {
@@ -43431,7 +43358,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres3"
+                    "ID": "me_have_trimestres2"
                   },
                   {
                     "Preposition": {
@@ -43484,7 +43411,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres3"
+                    "ID": "años_have_trimestres2"
                   },
                   {
                     "Attribute": {
@@ -43497,7 +43424,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años3"
+                    "ID": "trimestres_have_años2"
                   },
                   {
                     "Preposition": {
@@ -43715,7 +43642,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días4"
+                    "ID": "me_have_días3"
                   },
                   {
                     "Attribute": {
@@ -43728,7 +43655,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me4"
+                    "ID": "días_have_me3"
                   },
                   {
                     "Preposition": {
@@ -43781,7 +43708,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me4"
+                    "ID": "trimestres_have_me3"
                   },
                   {
                     "Attribute": {
@@ -43794,7 +43721,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres4"
+                    "ID": "me_have_trimestres3"
                   },
                   {
                     "Preposition": {
@@ -43847,7 +43774,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres4"
+                    "ID": "años_have_trimestres3"
                   },
                   {
                     "Attribute": {
@@ -43860,7 +43787,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años4"
+                    "ID": "trimestres_have_años3"
                   },
                   {
                     "Preposition": {
@@ -44078,7 +44005,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días5"
+                    "ID": "me_have_días4"
                   },
                   {
                     "Attribute": {
@@ -44091,7 +44018,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me5"
+                    "ID": "días_have_me4"
                   },
                   {
                     "Preposition": {
@@ -44144,7 +44071,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me5"
+                    "ID": "trimestres_have_me4"
                   },
                   {
                     "Attribute": {
@@ -44157,7 +44084,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres5"
+                    "ID": "me_have_trimestres4"
                   },
                   {
                     "Preposition": {
@@ -44210,7 +44137,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres5"
+                    "ID": "años_have_trimestres4"
                   },
                   {
                     "Attribute": {
@@ -44223,7 +44150,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años5"
+                    "ID": "trimestres_have_años4"
                   },
                   {
                     "Preposition": {
@@ -44441,7 +44368,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días6"
+                    "ID": "me_have_días5"
                   },
                   {
                     "Attribute": {
@@ -44454,7 +44381,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me6"
+                    "ID": "días_have_me5"
                   },
                   {
                     "Preposition": {
@@ -44507,7 +44434,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me6"
+                    "ID": "trimestres_have_me5"
                   },
                   {
                     "Attribute": {
@@ -44520,7 +44447,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres6"
+                    "ID": "me_have_trimestres5"
                   },
                   {
                     "Preposition": {
@@ -44573,7 +44500,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres6"
+                    "ID": "años_have_trimestres5"
                   },
                   {
                     "Attribute": {
@@ -44586,7 +44513,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años6"
+                    "ID": "trimestres_have_años5"
                   },
                   {
                     "Preposition": {
@@ -44804,7 +44731,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días7"
+                    "ID": "me_have_días6"
                   },
                   {
                     "Attribute": {
@@ -44817,7 +44744,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me7"
+                    "ID": "días_have_me6"
                   },
                   {
                     "Preposition": {
@@ -44870,7 +44797,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me7"
+                    "ID": "trimestres_have_me6"
                   },
                   {
                     "Attribute": {
@@ -44883,7 +44810,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres7"
+                    "ID": "me_have_trimestres6"
                   },
                   {
                     "Preposition": {
@@ -44936,7 +44863,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres7"
+                    "ID": "años_have_trimestres6"
                   },
                   {
                     "Attribute": {
@@ -44949,7 +44876,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años7"
+                    "ID": "trimestres_have_años6"
                   },
                   {
                     "Preposition": {
@@ -45167,7 +45094,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días8"
+                    "ID": "me_have_días7"
                   },
                   {
                     "Attribute": {
@@ -45180,7 +45107,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me8"
+                    "ID": "días_have_me7"
                   },
                   {
                     "Preposition": {
@@ -45233,7 +45160,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me8"
+                    "ID": "trimestres_have_me7"
                   },
                   {
                     "Attribute": {
@@ -45246,7 +45173,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres8"
+                    "ID": "me_have_trimestres7"
                   },
                   {
                     "Preposition": {
@@ -45299,7 +45226,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres8"
+                    "ID": "años_have_trimestres7"
                   },
                   {
                     "Attribute": {
@@ -45312,7 +45239,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años8"
+                    "ID": "trimestres_have_años7"
                   },
                   {
                     "Preposition": {
@@ -45530,7 +45457,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días9"
+                    "ID": "me_have_días8"
                   },
                   {
                     "Attribute": {
@@ -45543,7 +45470,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me9"
+                    "ID": "días_have_me8"
                   },
                   {
                     "Preposition": {
@@ -45596,7 +45523,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me9"
+                    "ID": "trimestres_have_me8"
                   },
                   {
                     "Attribute": {
@@ -45609,7 +45536,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres9"
+                    "ID": "me_have_trimestres8"
                   },
                   {
                     "Preposition": {
@@ -45662,7 +45589,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres9"
+                    "ID": "años_have_trimestres8"
                   },
                   {
                     "Attribute": {
@@ -45675,7 +45602,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años9"
+                    "ID": "trimestres_have_años8"
                   },
                   {
                     "Preposition": {
@@ -45893,7 +45820,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días10"
+                    "ID": "me_have_días9"
                   },
                   {
                     "Attribute": {
@@ -45906,7 +45833,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me10"
+                    "ID": "días_have_me9"
                   },
                   {
                     "Preposition": {
@@ -45959,7 +45886,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me10"
+                    "ID": "trimestres_have_me9"
                   },
                   {
                     "Attribute": {
@@ -45972,7 +45899,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres10"
+                    "ID": "me_have_trimestres9"
                   },
                   {
                     "Preposition": {
@@ -46025,7 +45952,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres10"
+                    "ID": "años_have_trimestres9"
                   },
                   {
                     "Attribute": {
@@ -46038,7 +45965,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años10"
+                    "ID": "trimestres_have_años9"
                   },
                   {
                     "Preposition": {
@@ -46256,7 +46183,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días11"
+                    "ID": "me_have_días10"
                   },
                   {
                     "Attribute": {
@@ -46269,7 +46196,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me11"
+                    "ID": "días_have_me10"
                   },
                   {
                     "Preposition": {
@@ -46322,7 +46249,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me11"
+                    "ID": "trimestres_have_me10"
                   },
                   {
                     "Attribute": {
@@ -46335,7 +46262,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres11"
+                    "ID": "me_have_trimestres10"
                   },
                   {
                     "Preposition": {
@@ -46388,7 +46315,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres11"
+                    "ID": "años_have_trimestres10"
                   },
                   {
                     "Attribute": {
@@ -46401,7 +46328,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años11"
+                    "ID": "trimestres_have_años10"
                   },
                   {
                     "Preposition": {
@@ -46619,7 +46546,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días12"
+                    "ID": "me_have_días11"
                   },
                   {
                     "Attribute": {
@@ -46632,7 +46559,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me12"
+                    "ID": "días_have_me11"
                   },
                   {
                     "Preposition": {
@@ -46685,7 +46612,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me12"
+                    "ID": "trimestres_have_me11"
                   },
                   {
                     "Attribute": {
@@ -46698,7 +46625,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres12"
+                    "ID": "me_have_trimestres11"
                   },
                   {
                     "Preposition": {
@@ -46751,7 +46678,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres12"
+                    "ID": "años_have_trimestres11"
                   },
                   {
                     "Attribute": {
@@ -46764,7 +46691,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años12"
+                    "ID": "trimestres_have_años11"
                   },
                   {
                     "Preposition": {
@@ -46982,7 +46909,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días13"
+                    "ID": "me_have_días12"
                   },
                   {
                     "Attribute": {
@@ -46995,7 +46922,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me13"
+                    "ID": "días_have_me12"
                   },
                   {
                     "Preposition": {
@@ -47048,7 +46975,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me13"
+                    "ID": "trimestres_have_me12"
                   },
                   {
                     "Attribute": {
@@ -47061,7 +46988,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres13"
+                    "ID": "me_have_trimestres12"
                   },
                   {
                     "Preposition": {
@@ -47114,7 +47041,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres13"
+                    "ID": "años_have_trimestres12"
                   },
                   {
                     "Attribute": {
@@ -47127,7 +47054,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años13"
+                    "ID": "trimestres_have_años12"
                   },
                   {
                     "Preposition": {
@@ -47345,7 +47272,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días14"
+                    "ID": "me_have_días13"
                   },
                   {
                     "Attribute": {
@@ -47358,7 +47285,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me14"
+                    "ID": "días_have_me13"
                   },
                   {
                     "Preposition": {
@@ -47411,7 +47338,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me14"
+                    "ID": "trimestres_have_me13"
                   },
                   {
                     "Attribute": {
@@ -47424,7 +47351,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres14"
+                    "ID": "me_have_trimestres13"
                   },
                   {
                     "Preposition": {
@@ -47477,7 +47404,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres14"
+                    "ID": "años_have_trimestres13"
                   },
                   {
                     "Attribute": {
@@ -47490,7 +47417,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años14"
+                    "ID": "trimestres_have_años13"
                   },
                   {
                     "Preposition": {
@@ -47708,7 +47635,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días15"
+                    "ID": "me_have_días14"
                   },
                   {
                     "Attribute": {
@@ -47721,7 +47648,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me15"
+                    "ID": "días_have_me14"
                   },
                   {
                     "Preposition": {
@@ -47774,7 +47701,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me15"
+                    "ID": "trimestres_have_me14"
                   },
                   {
                     "Attribute": {
@@ -47787,7 +47714,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres15"
+                    "ID": "me_have_trimestres14"
                   },
                   {
                     "Preposition": {
@@ -47840,7 +47767,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres15"
+                    "ID": "años_have_trimestres14"
                   },
                   {
                     "Attribute": {
@@ -47853,7 +47780,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años15"
+                    "ID": "trimestres_have_años14"
                   },
                   {
                     "Preposition": {
@@ -48071,7 +47998,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días16"
+                    "ID": "me_have_días15"
                   },
                   {
                     "Attribute": {
@@ -48084,7 +48011,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me16"
+                    "ID": "días_have_me15"
                   },
                   {
                     "Preposition": {
@@ -48137,7 +48064,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me16"
+                    "ID": "trimestres_have_me15"
                   },
                   {
                     "Attribute": {
@@ -48150,7 +48077,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres16"
+                    "ID": "me_have_trimestres15"
                   },
                   {
                     "Preposition": {
@@ -48203,7 +48130,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres16"
+                    "ID": "años_have_trimestres15"
                   },
                   {
                     "Attribute": {
@@ -48216,7 +48143,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años16"
+                    "ID": "trimestres_have_años15"
                   },
                   {
                     "Preposition": {
@@ -48434,7 +48361,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días17"
+                    "ID": "me_have_días16"
                   },
                   {
                     "Attribute": {
@@ -48447,7 +48374,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me17"
+                    "ID": "días_have_me16"
                   },
                   {
                     "Preposition": {
@@ -48500,7 +48427,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me17"
+                    "ID": "trimestres_have_me16"
                   },
                   {
                     "Attribute": {
@@ -48513,7 +48440,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres17"
+                    "ID": "me_have_trimestres16"
                   },
                   {
                     "Preposition": {
@@ -48566,7 +48493,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres17"
+                    "ID": "años_have_trimestres16"
                   },
                   {
                     "Attribute": {
@@ -48579,7 +48506,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años17"
+                    "ID": "trimestres_have_años16"
                   },
                   {
                     "Preposition": {
@@ -48797,7 +48724,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días18"
+                    "ID": "me_have_días17"
                   },
                   {
                     "Attribute": {
@@ -48810,7 +48737,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me18"
+                    "ID": "días_have_me17"
                   },
                   {
                     "Preposition": {
@@ -48863,7 +48790,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me18"
+                    "ID": "trimestres_have_me17"
                   },
                   {
                     "Attribute": {
@@ -48876,7 +48803,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres18"
+                    "ID": "me_have_trimestres17"
                   },
                   {
                     "Preposition": {
@@ -48929,7 +48856,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres18"
+                    "ID": "años_have_trimestres17"
                   },
                   {
                     "Attribute": {
@@ -48942,7 +48869,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años18"
+                    "ID": "trimestres_have_años17"
                   },
                   {
                     "Preposition": {
@@ -49160,7 +49087,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días19"
+                    "ID": "me_have_días18"
                   },
                   {
                     "Attribute": {
@@ -49173,7 +49100,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me19"
+                    "ID": "días_have_me18"
                   },
                   {
                     "Preposition": {
@@ -49226,7 +49153,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me19"
+                    "ID": "trimestres_have_me18"
                   },
                   {
                     "Attribute": {
@@ -49239,7 +49166,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres19"
+                    "ID": "me_have_trimestres18"
                   },
                   {
                     "Preposition": {
@@ -49292,7 +49219,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres19"
+                    "ID": "años_have_trimestres18"
                   },
                   {
                     "Attribute": {
@@ -49305,7 +49232,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años19"
+                    "ID": "trimestres_have_años18"
                   },
                   {
                     "Preposition": {
@@ -49523,7 +49450,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días20"
+                    "ID": "me_have_días19"
                   },
                   {
                     "Attribute": {
@@ -49536,7 +49463,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me20"
+                    "ID": "días_have_me19"
                   },
                   {
                     "Preposition": {
@@ -49589,7 +49516,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me20"
+                    "ID": "trimestres_have_me19"
                   },
                   {
                     "Attribute": {
@@ -49602,7 +49529,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres20"
+                    "ID": "me_have_trimestres19"
                   },
                   {
                     "Preposition": {
@@ -49655,7 +49582,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres20"
+                    "ID": "años_have_trimestres19"
                   },
                   {
                     "Attribute": {
@@ -49668,7 +49595,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años20"
+                    "ID": "trimestres_have_años19"
                   },
                   {
                     "Preposition": {
@@ -49886,7 +49813,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días21"
+                    "ID": "me_have_días20"
                   },
                   {
                     "Attribute": {
@@ -49899,7 +49826,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me21"
+                    "ID": "días_have_me20"
                   },
                   {
                     "Preposition": {
@@ -49952,7 +49879,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me21"
+                    "ID": "trimestres_have_me20"
                   },
                   {
                     "Attribute": {
@@ -49965,7 +49892,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres21"
+                    "ID": "me_have_trimestres20"
                   },
                   {
                     "Preposition": {
@@ -50018,7 +49945,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres21"
+                    "ID": "años_have_trimestres20"
                   },
                   {
                     "Attribute": {
@@ -50031,7 +49958,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años21"
+                    "ID": "trimestres_have_años20"
                   },
                   {
                     "Preposition": {
@@ -50249,7 +50176,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días22"
+                    "ID": "me_have_días21"
                   },
                   {
                     "Attribute": {
@@ -50262,7 +50189,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me22"
+                    "ID": "días_have_me21"
                   },
                   {
                     "Preposition": {
@@ -50315,7 +50242,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me22"
+                    "ID": "trimestres_have_me21"
                   },
                   {
                     "Attribute": {
@@ -50328,7 +50255,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres22"
+                    "ID": "me_have_trimestres21"
                   },
                   {
                     "Preposition": {
@@ -50381,7 +50308,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres22"
+                    "ID": "años_have_trimestres21"
                   },
                   {
                     "Attribute": {
@@ -50394,7 +50321,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años22"
+                    "ID": "trimestres_have_años21"
                   },
                   {
                     "Preposition": {
@@ -50612,7 +50539,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días23"
+                    "ID": "me_have_días22"
                   },
                   {
                     "Attribute": {
@@ -50625,7 +50552,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me23"
+                    "ID": "días_have_me22"
                   },
                   {
                     "Preposition": {
@@ -50678,7 +50605,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me23"
+                    "ID": "trimestres_have_me22"
                   },
                   {
                     "Attribute": {
@@ -50691,7 +50618,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres23"
+                    "ID": "me_have_trimestres22"
                   },
                   {
                     "Preposition": {
@@ -50744,7 +50671,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres23"
+                    "ID": "años_have_trimestres22"
                   },
                   {
                     "Attribute": {
@@ -50757,7 +50684,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años23"
+                    "ID": "trimestres_have_años22"
                   },
                   {
                     "Preposition": {
@@ -50975,7 +50902,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días24"
+                    "ID": "me_have_días23"
                   },
                   {
                     "Attribute": {
@@ -50988,7 +50915,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me24"
+                    "ID": "días_have_me23"
                   },
                   {
                     "Preposition": {
@@ -51041,7 +50968,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me24"
+                    "ID": "trimestres_have_me23"
                   },
                   {
                     "Attribute": {
@@ -51054,7 +50981,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres24"
+                    "ID": "me_have_trimestres23"
                   },
                   {
                     "Preposition": {
@@ -51107,7 +51034,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres24"
+                    "ID": "años_have_trimestres23"
                   },
                   {
                     "Attribute": {
@@ -51120,7 +51047,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años24"
+                    "ID": "trimestres_have_años23"
                   },
                   {
                     "Preposition": {
@@ -51338,7 +51265,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_días25"
+                    "ID": "me_have_días24"
                   },
                   {
                     "Attribute": {
@@ -51351,7 +51278,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "días_have_me25"
+                    "ID": "días_have_me24"
                   },
                   {
                     "Preposition": {
@@ -51404,7 +51331,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_me25"
+                    "ID": "trimestres_have_me24"
                   },
                   {
                     "Attribute": {
@@ -51417,7 +51344,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "me_have_trimestres25"
+                    "ID": "me_have_trimestres24"
                   },
                   {
                     "Preposition": {
@@ -51470,7 +51397,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "años_have_trimestres25"
+                    "ID": "años_have_trimestres24"
                   },
                   {
                     "Attribute": {
@@ -51483,7 +51410,7 @@
                     },
                     "State": "Generated",
                     "Weight": 0.99,
-                    "ID": "trimestres_have_años25"
+                    "ID": "trimestres_have_años24"
                   },
                   {
                     "Preposition": {
@@ -51715,6 +51642,105 @@
                     "State": "Generated",
                     "Weight": 0.99,
                     "ID": "msdyn_projectgoals_have_msdyn_projecttasktogoals"
+                  }
+                ]
+              },
+              "msdyn_projecttask_has_entity__gauge_max": {
+                "Binding": {
+                  "ConceptualEntity": "msdyn_projecttask"
+                },
+                "State": "Generated",
+                "Roles": {
+                  "msdyn_projecttask": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask"
+                    }
+                  },
+                  "msdyn_projecttask.entity__gauge_max": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask.entity__gauge_max"
+                    }
+                  }
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projecttask"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projecttask.entity__gauge_max"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "msdyn_projecttasks_have__gauge_max"
+                  }
+                ]
+              },
+              "msdyn_projecttask_has_avance_proyecto": {
+                "Binding": {
+                  "ConceptualEntity": "msdyn_projecttask"
+                },
+                "State": "Generated",
+                "Roles": {
+                  "msdyn_projecttask": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask"
+                    }
+                  },
+                  "msdyn_projecttask.avance_proyecto": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask.avance_proyecto"
+                    }
+                  }
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projecttask"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projecttask.avance_proyecto"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "msdyn_projecttasks_have__avance_proyecto"
+                  }
+                ]
+              },
+              "msdyn_projecttask_has_tareas_finalizadas": {
+                "Binding": {
+                  "ConceptualEntity": "msdyn_projecttask"
+                },
+                "State": "Generated",
+                "Roles": {
+                  "msdyn_projecttask": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask"
+                    }
+                  },
+                  "msdyn_projecttask.tareas_finalizadas": {
+                    "Target": {
+                      "Entity": "msdyn_projecttask.tareas_finalizadas"
+                    }
+                  }
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projecttask"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projecttask.tareas_finalizadas"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "msdyn_projecttasks_have_tareas_finalizadas"
                   }
                 ]
               },
@@ -64853,6 +64879,204 @@
                     "State": "Generated",
                     "Weight": 0.99,
                     "ID": "some_msdyn_projecttasks_are_overdue_msdyn_projecttasks"
+                  }
+                ]
+              },
+              "msdyn_projectgoal_end_date_año_has_msdyn_projectgoal_end_date_trimestre": {
+                "Binding": {
+                  "ConceptualEntity": "msdyn_projectgoal"
+                },
+                "State": "Generated",
+                "Roles": {
+                  "msdyn_projectgoal.end_date.año": {
+                    "Target": {
+                      "Entity": "msdyn_projectgoal.end_date.año"
+                    }
+                  },
+                  "msdyn_projectgoal.end_date.trimestre": {
+                    "Target": {
+                      "Entity": "msdyn_projectgoal.end_date.trimestre"
+                    }
+                  }
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projectgoal.end_date.año"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projectgoal.end_date.trimestre"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "años_have_trimestres25"
+                  },
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projectgoal.end_date.trimestre"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projectgoal.end_date.año"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "trimestres_have_años25"
+                  },
+                  {
+                    "Preposition": {
+                      "Subject": {
+                        "Role": "msdyn_projectgoal.end_date.trimestre"
+                      },
+                      "Prepositions": [
+                        {
+                          "in": {
+                            "State": "Generated"
+                          }
+                        }
+                      ],
+                      "Object": {
+                        "Role": "msdyn_projectgoal.end_date.año"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "trimestres_are_in_años25"
+                  }
+                ]
+              },
+              "msdyn_projectgoal_end_date_trimestre_has_msdyn_projectgoal_end_date_me": {
+                "Binding": {
+                  "ConceptualEntity": "msdyn_projectgoal"
+                },
+                "State": "Generated",
+                "Roles": {
+                  "msdyn_projectgoal.end_date.trimestre": {
+                    "Target": {
+                      "Entity": "msdyn_projectgoal.end_date.trimestre"
+                    }
+                  },
+                  "msdyn_projectgoal.end_date.me": {
+                    "Target": {
+                      "Entity": "msdyn_projectgoal.end_date.me"
+                    }
+                  }
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projectgoal.end_date.trimestre"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projectgoal.end_date.me"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "trimestres_have_me25"
+                  },
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projectgoal.end_date.me"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projectgoal.end_date.trimestre"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "me_have_trimestres25"
+                  },
+                  {
+                    "Preposition": {
+                      "Subject": {
+                        "Role": "msdyn_projectgoal.end_date.me"
+                      },
+                      "Prepositions": [
+                        {
+                          "in": {
+                            "State": "Generated"
+                          }
+                        }
+                      ],
+                      "Object": {
+                        "Role": "msdyn_projectgoal.end_date.trimestre"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "me_are_in_trimestres25"
+                  }
+                ]
+              },
+              "msdyn_projectgoal_end_date_me_has_msdyn_projectgoal_end_date_día": {
+                "Binding": {
+                  "ConceptualEntity": "msdyn_projectgoal"
+                },
+                "State": "Generated",
+                "Roles": {
+                  "msdyn_projectgoal.end_date.me": {
+                    "Target": {
+                      "Entity": "msdyn_projectgoal.end_date.me"
+                    }
+                  },
+                  "msdyn_projectgoal.end_date.día": {
+                    "Target": {
+                      "Entity": "msdyn_projectgoal.end_date.día"
+                    }
+                  }
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projectgoal.end_date.me"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projectgoal.end_date.día"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "me_have_días25"
+                  },
+                  {
+                    "Attribute": {
+                      "Subject": {
+                        "Role": "msdyn_projectgoal.end_date.día"
+                      },
+                      "Object": {
+                        "Role": "msdyn_projectgoal.end_date.me"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "días_have_me25"
+                  },
+                  {
+                    "Preposition": {
+                      "Subject": {
+                        "Role": "msdyn_projectgoal.end_date.día"
+                      },
+                      "Prepositions": [
+                        {
+                          "in": {
+                            "State": "Generated"
+                          }
+                        }
+                      ],
+                      "Object": {
+                        "Role": "msdyn_projectgoal.end_date.me"
+                      }
+                    },
+                    "State": "Generated",
+                    "Weight": 0.99,
+                    "ID": "días_are_in_me25"
                   }
                 ]
               },

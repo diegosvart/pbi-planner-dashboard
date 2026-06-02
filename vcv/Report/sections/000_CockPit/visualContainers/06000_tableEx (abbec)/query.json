@@ -42,18 +42,6 @@
               "NativeReferenceName": "Responsable"
             },
             {
-              "Column": {
-                "Expression": {
-                  "SourceRef": {
-                    "Source": "m"
-                  }
-                },
-                "Property": "DaysOverdue"
-              },
-              "Name": "msdyn_projecttask.DaysOverdue",
-              "NativeReferenceName": "Días de retraso"
-            },
-            {
               "Measure": {
                 "Expression": {
                   "SourceRef": {
@@ -76,30 +64,6 @@
               },
               "Name": "msdyn_projecttask.DueDateTexto",
               "NativeReferenceName": "Vencimiento"
-            },
-            {
-              "Column": {
-                "Expression": {
-                  "SourceRef": {
-                    "Source": "m"
-                  }
-                },
-                "Property": "PercentComplete"
-              },
-              "Name": "msdyn_projecttask.PercentComplete",
-              "NativeReferenceName": "% Avance"
-            },
-            {
-              "Column": {
-                "Expression": {
-                  "SourceRef": {
-                    "Source": "m"
-                  }
-                },
-                "Property": "Actualizado"
-              },
-              "Name": "msdyn_projecttask.Actualizado",
-              "NativeReferenceName": "Actualizado"
             },
             {
               "Column": {
@@ -223,6 +187,21 @@
                 }
               }
             }
+          ],
+          "OrderBy": [
+            {
+              "Direction": 1,
+              "Expression": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Source": "m"
+                    }
+                  },
+                  "Property": "Project Task Name"
+                }
+              }
+            }
           ]
         },
         "Binding": {
@@ -234,10 +213,7 @@
                   1,
                   2,
                   3,
-                  4,
-                  5,
-                  6,
-                  7
+                  4
                 ]
               }
             ]

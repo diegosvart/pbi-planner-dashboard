@@ -4,11 +4,11 @@
     {
       "id": 0,
       "position": {
-        "x": 454.20768019713876,
-        "y": 246.02916010678351,
+        "x": 454.44444444444446,
+        "y": 210,
         "z": 6000,
-        "width": 805.37750701622292,
-        "height": 474.1844068724759,
+        "width": 805.55555555555554,
+        "height": 510,
         "tabOrder": 6000
       }
     },
@@ -38,19 +38,10 @@
           "queryRef": "msdyn_projecttask.Responsable Principal"
         },
         {
-          "queryRef": "msdyn_projecttask.Actualizado"
-        },
-        {
-          "queryRef": "msdyn_projecttask.PercentComplete"
+          "queryRef": "msdyn_projecttask.Ultima actualizacion"
         },
         {
           "queryRef": "msdyn_projecttask.DueDateTexto"
-        },
-        {
-          "queryRef": "msdyn_projecttask.DaysOverdue"
-        },
-        {
-          "queryRef": "msdyn_projecttask.Ultima actualizacion"
         }
       ]
     },
@@ -89,18 +80,6 @@
           "NativeReferenceName": "Responsable"
         },
         {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Source": "m"
-              }
-            },
-            "Property": "DaysOverdue"
-          },
-          "Name": "msdyn_projecttask.DaysOverdue",
-          "NativeReferenceName": "Días de retraso"
-        },
-        {
           "Measure": {
             "Expression": {
               "SourceRef": {
@@ -131,46 +110,31 @@
                 "Source": "m"
               }
             },
-            "Property": "PercentComplete"
-          },
-          "Name": "msdyn_projecttask.PercentComplete",
-          "NativeReferenceName": "% Avance"
-        },
-        {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Source": "m"
-              }
-            },
-            "Property": "Actualizado"
-          },
-          "Name": "msdyn_projecttask.Actualizado",
-          "NativeReferenceName": "Actualizado"
-        },
-        {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Source": "m"
-              }
-            },
             "Property": "ParentTaskCode"
           },
           "Name": "msdyn_projecttask.ParentTaskCode",
           "NativeReferenceName": "ParentTaskCode"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 1,
+          "Expression": {
+            "Column": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "m"
+                }
+              },
+              "Property": "Project Task Name"
+            }
+          }
         }
       ]
     },
     "columnProperties": {
       "msdyn_projecttask.DueDateTexto": {
         "displayName": "Vencimiento"
-      },
-      "msdyn_projecttask.DaysOverdue": {
-        "displayName": "Días de retraso"
-      },
-      "msdyn_projecttask.PercentComplete": {
-        "displayName": "% Avance"
       },
       "msdyn_projecttask.Ultima actualizacion": {
         "displayName": "Última actualizacion"

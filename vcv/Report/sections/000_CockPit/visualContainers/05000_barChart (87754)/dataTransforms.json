@@ -21,7 +21,7 @@
   "queryMetadata": {
     "Select": [
       {
-        "Restatement": "Pillar",
+        "Restatement": "Categorías",
         "Name": "msdyn_projecttask.Pillar",
         "Type": 2048
       },
@@ -76,7 +76,7 @@
   ],
   "selects": [
     {
-      "displayName": "Pillar",
+      "displayName": "Categorías",
       "queryName": "msdyn_projecttask.Pillar",
       "roles": {
         "Category": true

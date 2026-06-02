@@ -12,7 +12,7 @@
       }
     },
     "type": "Advanced",
-    "howCreated": 0,
+    "howCreated": 1,
     "isHiddenInViewMode": false,
     "ordinal": 0
   },
@@ -250,7 +250,7 @@
       }
     },
     "type": "Advanced",
-    "howCreated": 0,
+    "howCreated": 1,
     "isHiddenInViewMode": false,
     "ordinal": 9
   },
@@ -267,7 +267,7 @@
       }
     },
     "type": "Advanced",
-    "howCreated": 0,
+    "howCreated": 1,
     "isHiddenInViewMode": false,
     "ordinal": 10
   },

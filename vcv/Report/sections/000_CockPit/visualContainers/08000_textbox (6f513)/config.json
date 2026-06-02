@@ -4,11 +4,11 @@
     {
       "id": 0,
       "position": {
-        "x": 436.0760456273764,
-        "y": 73.738806549235662,
+        "x": 744.44444444444446,
+        "y": 51.111111111111107,
         "z": 8000,
-        "width": 450.060991697059,
-        "height": 38.140762008225344,
+        "width": 208.88888888888889,
+        "height": 38.888888888888886,
         "tabOrder": 8000
       }
     }
@@ -26,12 +26,12 @@
                   {
                     "value": "Panel: ¿Cómo vamos?",
                     "textStyle": {
+                      "fontWeight": "bold",
                       "fontFamily": "Arial",
                       "fontSize": "12pt"
                     }
                   }
-                ],
-                "horizontalTextAlignment": "center"
+                ]
               }
             ]
           }
