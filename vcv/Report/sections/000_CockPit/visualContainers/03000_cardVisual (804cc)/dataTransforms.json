@@ -1,0 +1,70 @@
+{
+  "objects": {
+    "border": [
+      {
+        "properties": {
+          "show": {
+            "expr": {
+              "Literal": {
+                "Value": "true"
+              }
+            }
+          }
+        },
+        "selector": {
+          "id": "default"
+        }
+      }
+    ]
+  },
+  "projectionOrdering": {
+    "Data": [
+      0
+    ]
+  },
+  "queryMetadata": {
+    "Select": [
+      {
+        "Restatement": "En Riesgo",
+        "Name": "msdyn_projecttask.En Riesgo",
+        "Type": 3,
+        "Format": "0"
+      }
+    ]
+  },
+  "visualElements": [
+    {
+      "DataRoles": [
+        {
+          "Name": "Data",
+          "Projection": 0,
+          "isActive": false
+        }
+      ]
+    }
+  ],
+  "selects": [
+    {
+      "displayName": "En Riesgo",
+      "format": "0",
+      "queryName": "msdyn_projecttask.En Riesgo",
+      "roles": {
+        "Data": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 260
+      },
+      "expr": {
+        "Measure": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "msdyn_projecttask"
+            }
+          },
+          "Property": "En Riesgo"
+        }
+      }
+    }
+  ]
+}

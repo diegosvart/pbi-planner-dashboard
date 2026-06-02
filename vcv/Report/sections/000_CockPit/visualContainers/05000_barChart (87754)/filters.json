@@ -1,0 +1,19 @@
+[
+  {
+    "name": "7fab3495356bd40927b2",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "msdyn_projecttask"
+          }
+        },
+        "Property": "Pillar"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 0,
+    "isHiddenInViewMode": false,
+    "displayName": "Tipo Proyecto"
+  }
+]

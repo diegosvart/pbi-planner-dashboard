@@ -1,0 +1,118 @@
+{
+  "name": "87754be0f0d5fa96f869",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 21.111111111111111,
+        "y": 201.11111111111111,
+        "z": 5000,
+        "width": 433.33333333333331,
+        "height": 510,
+        "tabOrder": 5000
+      }
+    },
+    {
+      "id": 1,
+      "position": {
+        "x": 0,
+        "y": 324,
+        "z": 5000,
+        "width": 324,
+        "height": 353.88349514563112,
+        "tabOrder": 5000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "barChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "msdyn_projecttask.Pillar",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "msdyn_projecttask.Total Tareas"
+        }
+      ],
+      "Series": [
+        {
+          "queryRef": "msdyn_projecttask.Estado Padre"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "m",
+          "Entity": "msdyn_projecttask",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "Pillar"
+          },
+          "Name": "msdyn_projecttask.Pillar",
+          "NativeReferenceName": "Categorías"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "Total Tareas"
+          },
+          "Name": "msdyn_projecttask.Total Tareas",
+          "NativeReferenceName": "Total Tareas"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "Estado Padre"
+          },
+          "Name": "msdyn_projecttask.Estado Padre",
+          "NativeReferenceName": "Estado Padre"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "m"
+                }
+              },
+              "Property": "Total Tareas"
+            }
+          }
+        }
+      ]
+    },
+    "columnProperties": {
+      "msdyn_projecttask.Pillar": {
+        "displayName": "Categorías"
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true
+  }
+}

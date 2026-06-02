@@ -1,0 +1,42 @@
+{
+  "name": "7c7b7ad1b0de71c4f2fc",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 363.33333333333331,
+        "y": 35.555555555555557,
+        "z": 7000,
+        "width": 381.11111111111109,
+        "height": 54.444444444444443,
+        "tabOrder": 7000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "textbox",
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Planificación TI - 2026",
+                    "textStyle": {
+                      "fontFamily": "Arial Black",
+                      "fontSize": "20pt"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "center"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
