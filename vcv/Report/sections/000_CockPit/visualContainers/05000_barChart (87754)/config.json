@@ -4,11 +4,11 @@
     {
       "id": 0,
       "position": {
-        "x": 21.02813334246013,
-        "y": 247.0805667739065,
+        "x": 21.111111111111111,
+        "y": 201.11111111111111,
         "z": 5000,
-        "width": 433.17954685467862,
-        "height": 473.13300020535291,
+        "width": 433.33333333333331,
+        "height": 510,
         "tabOrder": 5000
       }
     },
@@ -64,7 +64,7 @@
             "Property": "Pillar"
           },
           "Name": "msdyn_projecttask.Pillar",
-          "NativeReferenceName": "Pillar"
+          "NativeReferenceName": "Categorías"
         },
         {
           "Measure": {
@@ -106,6 +106,11 @@
           }
         }
       ]
+    },
+    "columnProperties": {
+      "msdyn_projecttask.Pillar": {
+        "displayName": "Categorías"
+      }
     },
     "drillFilterOtherVisuals": true,
     "hasDefaultSort": true

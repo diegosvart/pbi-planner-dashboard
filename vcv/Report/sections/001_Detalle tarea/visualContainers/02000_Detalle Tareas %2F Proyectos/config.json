@@ -149,6 +149,21 @@
           "Name": "msdyn_projecttask.Atraso",
           "NativeReferenceName": "Atraso"
         }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 1,
+          "Expression": {
+            "Column": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "m"
+                }
+              },
+              "Property": "Project Task Name"
+            }
+          }
+        }
       ]
     },
     "columnProperties": {

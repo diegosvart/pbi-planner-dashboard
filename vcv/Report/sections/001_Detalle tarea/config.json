@@ -1,4 +1,16 @@
 {
+  "relationships": [
+    {
+      "source": "4bd08b0e93573c144dc0",
+      "target": "c014476521da3c8a8c7e",
+      "type": 3
+    },
+    {
+      "source": "4bd08b0e93573c144dc0",
+      "target": "209c369d30988ceb0ea1",
+      "type": 3
+    }
+  ],
   "objects": {
     "outspacePane": [
       {

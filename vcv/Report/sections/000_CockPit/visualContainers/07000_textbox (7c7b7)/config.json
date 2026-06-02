@@ -4,11 +4,11 @@
     {
       "id": 0,
       "position": {
-        "x": 375.05082641421586,
-        "y": 24.155815938542716,
+        "x": 363.33333333333331,
+        "y": 35.555555555555557,
         "z": 7000,
-        "width": 587.36773492667032,
-        "height": 49.582990610692946,
+        "width": 381.11111111111109,
+        "height": 54.444444444444443,
         "tabOrder": 7000
       }
     }
@@ -24,7 +24,7 @@
               {
                 "textRuns": [
                   {
-                    "value": "Planificación TI - 2026.",
+                    "value": "Planificación TI - 2026",
                     "textStyle": {
                       "fontFamily": "Arial Black",
                       "fontSize": "20pt"

@@ -1,0 +1,139 @@
+{
+  "name": "c014476521da3c8a8c7e",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 640.306660277911,
+        "y": 39.953453350674245,
+        "z": 3001,
+        "width": 300.70230679717986,
+        "height": 139.83708672735986,
+        "tabOrder": 3001
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "gauge",
+    "projections": {
+      "Y": [
+        {
+          "queryRef": "msdyn_projecttask.% Avance Proyecto"
+        }
+      ],
+      "MaxValue": [
+        {
+          "queryRef": "msdyn_projecttask._Gauge Max"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "m",
+          "Entity": "msdyn_projecttask",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "% Avance Proyecto"
+          },
+          "Name": "msdyn_projecttask.% Avance Proyecto",
+          "NativeReferenceName": "% Avance Proyecto"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "_Gauge Max"
+          },
+          "Name": "msdyn_projecttask._Gauge Max",
+          "NativeReferenceName": "_Gauge Max"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "m"
+                }
+              },
+              "Property": "% Avance Proyecto"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'% Avance'"
+                }
+              }
+            },
+            "alignment": {
+              "expr": {
+                "Literal": {
+                  "Value": "'center'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "padding": [
+        {
+          "properties": {
+            "top": {
+              "expr": {
+                "Literal": {
+                  "Value": "5D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "border": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "width": {
+              "expr": {
+                "Literal": {
+                  "Value": "2D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

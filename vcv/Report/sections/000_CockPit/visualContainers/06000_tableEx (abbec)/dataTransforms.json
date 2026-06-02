@@ -21,12 +21,9 @@
   },
   "projectionOrdering": {
     "Values": [
-      7,
+      4,
       0,
       1,
-      6,
-      5,
-      4,
       2,
       3
     ]
@@ -44,12 +41,6 @@
         "Type": 2048
       },
       {
-        "Restatement": "Días de retraso",
-        "Name": "msdyn_projecttask.DaysOverdue",
-        "Type": 3,
-        "Format": "0"
-      },
-      {
         "Restatement": "Última actualizacion",
         "Name": "msdyn_projecttask.Ultima actualizacion",
         "Type": 2048
@@ -57,17 +48,6 @@
       {
         "Restatement": "Vencimiento",
         "Name": "msdyn_projecttask.DueDateTexto",
-        "Type": 2048
-      },
-      {
-        "Restatement": "% Avance",
-        "Name": "msdyn_projecttask.PercentComplete",
-        "Type": 1,
-        "Format": "0"
-      },
-      {
-        "Restatement": "Actualizado",
-        "Name": "msdyn_projecttask.Actualizado",
         "Type": 2048
       },
       {
@@ -240,7 +220,7 @@
       "DataRoles": [
         {
           "Name": "Values",
-          "Projection": 7,
+          "Projection": 4,
           "isActive": false
         },
         {
@@ -251,21 +231,6 @@
         {
           "Name": "Values",
           "Projection": 1,
-          "isActive": false
-        },
-        {
-          "Name": "Values",
-          "Projection": 6,
-          "isActive": false
-        },
-        {
-          "Name": "Values",
-          "Projection": 5,
-          "isActive": false
-        },
-        {
-          "Name": "Values",
-          "Projection": 4,
           "isActive": false
         },
         {
@@ -288,6 +253,8 @@
       "roles": {
         "Values": true
       },
+      "sort": 1,
+      "sortOrder": 0,
       "type": {
         "category": null,
         "underlyingType": 1
@@ -321,28 +288,6 @@
             }
           },
           "Property": "Responsable"
-        }
-      }
-    },
-    {
-      "displayName": "Días de retraso",
-      "format": "0",
-      "queryName": "msdyn_projecttask.DaysOverdue",
-      "roles": {
-        "Values": true
-      },
-      "type": {
-        "category": null,
-        "underlyingType": 260
-      },
-      "expr": {
-        "Column": {
-          "Expression": {
-            "SourceRef": {
-              "Entity": "msdyn_projecttask"
-            }
-          },
-          "Property": "DaysOverdue"
         }
       }
     },
@@ -385,49 +330,6 @@
             }
           },
           "Property": "DueDateTexto"
-        }
-      }
-    },
-    {
-      "displayName": "% Avance",
-      "format": "0",
-      "queryName": "msdyn_projecttask.PercentComplete",
-      "roles": {
-        "Values": true
-      },
-      "type": {
-        "category": null,
-        "underlyingType": 259
-      },
-      "expr": {
-        "Column": {
-          "Expression": {
-            "SourceRef": {
-              "Entity": "msdyn_projecttask"
-            }
-          },
-          "Property": "PercentComplete"
-        }
-      }
-    },
-    {
-      "displayName": "Actualizado",
-      "queryName": "msdyn_projecttask.Actualizado",
-      "roles": {
-        "Values": true
-      },
-      "type": {
-        "category": null,
-        "underlyingType": 1
-      },
-      "expr": {
-        "Column": {
-          "Expression": {
-            "SourceRef": {
-              "Entity": "msdyn_projecttask"
-            }
-          },
-          "Property": "Actualizado"
         }
       }
     },
