@@ -19,7 +19,7 @@ import subprocess
 import sys
 import urllib.request
 import urllib.parse
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 
 ORG = "org914d3d16.crm.dynamics.com"
@@ -39,11 +39,10 @@ def extract_code(subject: str | None) -> str | None:
     return m.group(1) if m else None
 
 
-def classify_task(end_dt: datetime, today: datetime, window_days: int) -> str | None:
-    window = today + timedelta(days=window_days)
-    if end_dt < today:
+def classify_task(end_dt: datetime, today: datetime) -> str | None:
+    if end_dt.date() < today.date():
         return "VENCIDA"
-    if end_dt <= window:
+    if end_dt.date() == today.date():
         return "EN FECHA"
     return None
 
@@ -175,7 +174,7 @@ def fetch_tasks(token: str, project_id: str) -> list:
     fields = ",".join([
         "msdyn_projecttaskid", "msdyn_subject", "msdyn_progress",
         "msdyn_scheduledend", "modifiedon", "msdyn_descriptionplaintext",
-        "_msdyn_parenttask_value", "_msdyn_projectbucket_value",
+        "_msdyn_parenttask_value", "_msdyn_projectbucket_value", "statecode",
     ])
     url = (f"{BASE_URL}/msdyn_projecttasks"
            f"?$filter=_msdyn_project_value eq {project_id}"
@@ -200,14 +199,17 @@ def resolve_cross_project_parents(token: str, missing_ids: list[str]) -> dict:
 # ── Report builder ────────────────────────────────────────────────────────────
 
 def build_report(tasks: list, buckets: dict, done_id: str | None,
-                 parent_index: dict, today: datetime, window_days: int) -> tuple[list, int]:
+                 parent_index: dict, today: datetime) -> tuple[list, int]:
     """Returns (rows, sin_titulo_count). Excludes tasks with empty/whitespace subject."""
     rows = []
     sin_titulo = 0
     for t in tasks:
         subject = (t.get("msdyn_subject") or "").strip()
-        if not subject:
+        if not subject or subject.lower() == "tarea sin título":
             sin_titulo += 1
+            continue
+
+        if t.get("statecode", 0) != 0:
             continue
 
         parent_id = t.get("_msdyn_parenttask_value")
@@ -222,7 +224,7 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
         if not end_raw:
             continue
         end_dt = datetime.fromisoformat(end_raw.replace("Z", "+00:00"))
-        categoria = classify_task(end_dt, today, window_days)
+        categoria = classify_task(end_dt, today)
         if categoria is None:
             continue
 
@@ -270,15 +272,9 @@ def group_and_sort(rows: list) -> list:
         grouped[pc]["hijas"].append(entry)
 
     for pc in grouped:
-        grouped[pc]["hijas"].sort(key=lambda x: (0 if x["categoria"] == "VENCIDA" else 1, x["end_dt"]))
+        grouped[pc]["hijas"].sort(key=lambda x: x["subject"])
 
-    return sorted(
-        grouped.items(),
-        key=lambda item: (
-            -sum(1 for h in item[1]["hijas"] if h["categoria"] == "VENCIDA"),
-            item[0],
-        ),
-    )
+    return sorted(grouped.items(), key=lambda item: item[0])
 
 
 # ── Output ────────────────────────────────────────────────────────────────────
@@ -292,7 +288,7 @@ def print_report(padres_sorted: list, today: datetime, plan_label: str, sin_titu
 
     print(f"\n{'='*W}")
     print(f"  REPORTE DE GESTIÓN — {plan_label}")
-    print(f"  Hijas accionables (vencidas o en fecha), bucket != Done")
+    print("  Hijas accionables (vencidas o en fecha), bucket != Done")
     print(f"  Fecha referencia: {today.strftime('%d-%m-%Y')}")
     print(f"{'='*W}")
 
@@ -316,7 +312,7 @@ def print_report(padres_sorted: list, today: datetime, plan_label: str, sin_titu
                 print(f"     ↳ {h['nota']}")
 
     print(f"\n{'='*W}")
-    print(f"  RESUMEN EJECUTIVO")
+    print("  RESUMEN EJECUTIVO")
     print(f"{'='*W}")
     print(f"  Grupos padre con hijas accionables : {len(padres_sorted)}")
     print(f"  Total hijas accionables            : {total}")
@@ -333,7 +329,7 @@ def print_report(padres_sorted: list, today: datetime, plan_label: str, sin_titu
 def _print_analysis(padres_sorted: list, today: datetime, sin_titulo: int = 0):
     W = 140
     print(f"\n{'='*W}")
-    print(f"  RECOMENDACIONES DE GESTIÓN")
+    print("  RECOMENDACIONES DE GESTIÓN")
     print(f"{'='*W}")
 
     # Escalamiento — bloqueadas vencidas críticas
@@ -345,12 +341,12 @@ def _print_analysis(padres_sorted: list, today: datetime, sin_titulo: int = 0):
                 escalaciones.append((h["subject"][:60], h["responsable"], e["reason"]))
 
     if escalaciones:
-        print(f"\n  [Escalamiento — Bloqueadas vencidas críticas]")
+        print("\n  [Escalamiento — Bloqueadas vencidas críticas]")
         for subj, resp, reason in escalaciones:
             print(f"  ⚠ {subj}")
             print(f"    Responsable: {resp}  |  {reason}")
     else:
-        print(f"\n  [Escalamiento] Sin tareas bloqueadas-vencidas críticas.")
+        print("\n  [Escalamiento] Sin tareas bloqueadas-vencidas críticas.")
 
     # Sugerencias de bucket
     bucket_suggestions = []
@@ -361,12 +357,12 @@ def _print_analysis(padres_sorted: list, today: datetime, sin_titulo: int = 0):
                 bucket_suggestions.append((h["subject"][:55], h["bucket"], s["target_bucket"], s["reason"]))
 
     if bucket_suggestions:
-        print(f"\n  [Cambios de bucket sugeridos]")
+        print("\n  [Cambios de bucket sugeridos]")
         for subj, from_b, to_b, reason in bucket_suggestions:
             print(f"  • {subj}")
             print(f"    {from_b} → {to_b}  |  {reason}")
     else:
-        print(f"\n  [Cambios de bucket] Sin sugerencias — estado coherente.")
+        print("\n  [Cambios de bucket] Sin sugerencias — estado coherente.")
 
     # Riesgo por responsable
     resp_count: dict[str, int] = {}
@@ -378,7 +374,7 @@ def _print_analysis(padres_sorted: list, today: datetime, sin_titulo: int = 0):
             if h["categoria"] == "VENCIDA":
                 resp_vencidas[r] = resp_vencidas.get(r, 0) + 1
 
-    print(f"\n  [Carga por responsable]")
+    print("\n  [Carga por responsable]")
     for r, cnt in sorted(resp_count.items(), key=lambda x: -x[1]):
         v = resp_vencidas.get(r, 0)
         alert = " ⚠ VENCIDAS" if v > 0 else ""
@@ -389,15 +385,15 @@ def _print_analysis(padres_sorted: list, today: datetime, sin_titulo: int = 0):
         1 for _, d in padres_sorted
         for h in d["hijas"] if h["categoria"] == "VENCIDA" and not h["tiene_nota"]
     )
-    print(f"\n  [Calidad de datos]")
+    print("\n  [Calidad de datos]")
     if sin_titulo:
         print(f"  ⚠ {sin_titulo} tarea(s) sin título encontradas — excluidas del reporte (datos incompletos en Planner).")
     if sin_nota_vencidas:
         print(f"  ⚠ {sin_nota_vencidas} tarea(s) vencida(s) SIN nota de gestión — riesgo alto, sin visibilidad de bloqueo.")
     if not sin_titulo and not sin_nota_vencidas:
-        print(f"  ✓ Sin problemas de calidad detectados.")
+        print("  ✓ Sin problemas de calidad detectados.")
     elif not sin_nota_vencidas:
-        print(f"  ✓ Todas las tareas vencidas tienen nota de gestión registrada.")
+        print("  ✓ Todas las tareas vencidas tienen nota de gestión registrada.")
 
     print(f"{'='*W}")
 
@@ -442,7 +438,6 @@ def main():
                               help="Cargar datos desde caché JSON (sin consultar Dataverse)")
     parser.add_argument("--cache-file", metavar="FILE",
                         help="Guardar datos crudos en caché JSON tras la extracción")
-    parser.add_argument("--window-days", type=int, default=14, help="Ventana 'en fecha' en días (default: 14)")
     parser.add_argument("--today", help="Fecha de referencia YYYY-MM-DD (default: hoy)")
     parser.add_argument("--out", help="Ruta CSV de salida (opcional)")
     args = parser.parse_args()
@@ -514,14 +509,14 @@ def main():
                 json.dump(cache_data, f, ensure_ascii=False, indent=2)
             print(f"  Caché guardada: {args.cache_file}")
 
-    rows, sin_titulo = build_report(tasks, buckets, done_id, parent_index, today_dt, args.window_days)
+    rows, sin_titulo = build_report(tasks, buckets, done_id, parent_index, today_dt)
     padres_sorted = group_and_sort(rows)
     print_report(padres_sorted, today_dt, plan_label, sin_titulo)
 
     if args.out:
         write_csv(padres_sorted, args.out)
     elif args.cache_file:
-        print(f"\n  Para exportar a CSV sin re-consultar Dataverse:")
+        print("\n  Para exportar a CSV sin re-consultar Dataverse:")
         print(f"  python scripts/plan_report.py --from-cache {args.cache_file} --out <ruta.csv>")
 
 

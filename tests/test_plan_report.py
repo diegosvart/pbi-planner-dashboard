@@ -5,10 +5,9 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
-import pytest
 from plan_report import (
     extract_code, classify_task, build_parent_index, suggest_bucket,
-    needs_escalation, build_report,
+    needs_escalation, build_report, group_and_sort,
 )
 
 TODAY = datetime(2026, 6, 11, tzinfo=timezone.utc)
@@ -53,30 +52,30 @@ class TestExtractCode:
 class TestClassifyTask:
     def test_overdue_yesterday(self):
         end = TODAY - timedelta(days=1)
-        assert classify_task(end, TODAY, WINDOW_DAYS) == "VENCIDA"
+        assert classify_task(end, TODAY) == "VENCIDA"
 
     def test_overdue_far_past(self):
         end = TODAY - timedelta(days=60)
-        assert classify_task(end, TODAY, WINDOW_DAYS) == "VENCIDA"
+        assert classify_task(end, TODAY) == "VENCIDA"
 
     def test_due_today(self):
-        assert classify_task(TODAY, TODAY, WINDOW_DAYS) == "EN FECHA"
+        assert classify_task(TODAY, TODAY) == "EN FECHA"
 
     def test_due_within_window(self):
         end = TODAY + timedelta(days=7)
-        assert classify_task(end, TODAY, WINDOW_DAYS) == "EN FECHA"
+        assert classify_task(end, TODAY) is None
 
     def test_due_exactly_window_boundary(self):
         end = TODAY + timedelta(days=14)
-        assert classify_task(end, TODAY, WINDOW_DAYS) == "EN FECHA"
+        assert classify_task(end, TODAY) is None
 
     def test_due_beyond_window_returns_none(self):
         end = TODAY + timedelta(days=15)
-        assert classify_task(end, TODAY, WINDOW_DAYS) is None
+        assert classify_task(end, TODAY) is None
 
     def test_far_future_returns_none(self):
         end = TODAY + timedelta(days=90)
-        assert classify_task(end, TODAY, WINDOW_DAYS) is None
+        assert classify_task(end, TODAY) is None
 
 
 # ── build_parent_index ────────────────────────────────────────────────────────
@@ -220,7 +219,7 @@ class TestNeedsEscalation:
 
 # ── build_report — phantom task filter ───────────────────────────────────────
 
-def _make_raw_task(task_id, subject, parent_id, end_iso, progress=0.0, bucket_id=None):
+def _make_raw_task(task_id, subject, parent_id, end_iso, progress=0.0, bucket_id=None, statecode=0):
     return {
         "msdyn_projecttaskid": task_id,
         "msdyn_subject": subject,
@@ -231,6 +230,7 @@ def _make_raw_task(task_id, subject, parent_id, end_iso, progress=0.0, bucket_id
         "modifiedon": "2026-06-01T00:00:00Z",
         "msdyn_descriptionplaintext": None,
         "msdyn_pfwmodifiedby": None,
+        "statecode": statecode,
     }
 
 
@@ -242,7 +242,7 @@ class TestBuildReportPhantom:
 
     def _run(self, tasks):
         parent_index = {"p1": "NORM-001 - Padre"}
-        return build_report(tasks, {}, None, parent_index, TODAY, WINDOW_DAYS)
+        return build_report(tasks, {}, None, parent_index, TODAY)
 
     def test_empty_subject_excluded_and_counted(self):
         tasks = [
@@ -285,3 +285,111 @@ class TestBuildReportPhantom:
         rows, _ = self._run([task])
         assert len(rows) == 1
         assert rows[0]["nota"] == long_nota
+
+
+# ── Bug 2 — classify_task: sin ventana futura ────────────────────────────────
+
+class TestClassifyTaskNoFuture:
+    """Sólo pasado y hoy son accionables. Futuro = None."""
+
+    def test_yesterday_is_vencida(self):
+        end = TODAY - timedelta(days=1)
+        assert classify_task(end, TODAY) == "VENCIDA"
+
+    def test_today_is_en_fecha(self):
+        assert classify_task(TODAY, TODAY) == "EN FECHA"
+
+    def test_tomorrow_is_none(self):
+        end = TODAY + timedelta(days=1)
+        assert classify_task(end, TODAY) is None
+
+    def test_in_7_days_is_none(self):
+        end = TODAY + timedelta(days=7)
+        assert classify_task(end, TODAY) is None
+
+    def test_far_future_is_none(self):
+        end = TODAY + timedelta(days=90)
+        assert classify_task(end, TODAY) is None
+
+
+# ── Bug 1 — build_report: filtro statecode ──────────────────────────────────
+
+class TestBuildReportStateCode:
+    """Tareas inactivas (statecode != 0) deben ser excluidas del reporte."""
+
+    def _run(self, tasks):
+        parent_index = {"p1": "NORM-001 - Padre"}
+        return build_report(tasks, {}, None, parent_index, TODAY)
+
+    def test_tarea_sin_titulo_placeholder_excluded(self):
+        task = _make_raw_task("t1", "Tarea sin título", "p1", VENCIDA_END, statecode=0)
+        rows, sin_titulo = self._run([task])
+        assert rows == []
+        assert sin_titulo == 1
+
+    def test_inactive_task_excluded(self):
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea real", "p1", VENCIDA_END, statecode=1)
+        rows, _ = self._run([task])
+        assert rows == []
+
+    def test_active_task_included(self):
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea real", "p1", VENCIDA_END, statecode=0)
+        rows, _ = self._run([task])
+        assert len(rows) == 1
+
+    def test_missing_statecode_treated_as_active(self):
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea real", "p1", VENCIDA_END)
+        del task["statecode"]
+        rows, _ = self._run([task])
+        assert len(rows) == 1
+
+
+# ── Bug 3 — group_and_sort: orden alfabético ─────────────────────────────────
+
+class TestGroupAndSortAlpha:
+    """Grupos ordenados por parent_code ASC; hijas por subject ASC."""
+
+    def _make_entry(self, parent_code, subject, categoria="EN FECHA"):
+        return {
+            "parent_code": parent_code,
+            "parent_subject": f"{parent_code} - desc",
+            "subject": subject,
+            "categoria": categoria,
+            "end_dt": "2026-06-12T00:00:00Z",
+        }
+
+    def test_groups_sorted_by_parent_code_asc(self):
+        rows = [
+            self._make_entry("NORM-020", "NORM-020.E1"),
+            self._make_entry("INTER-001", "INTER-001.E1"),
+        ]
+        result = group_and_sort(rows)
+        assert [pc for pc, _ in result] == ["INTER-001", "NORM-020"]
+
+    def test_groups_not_sorted_by_vencidas_count(self):
+        rows = [
+            self._make_entry("NORM-001", "NORM-001.E1", "VENCIDA"),
+            self._make_entry("NORM-001", "NORM-001.E2", "VENCIDA"),
+            self._make_entry("INTER-001", "INTER-001.E1", "EN FECHA"),
+        ]
+        result = group_and_sort(rows)
+        assert result[0][0] == "INTER-001"
+
+    def test_hijas_sorted_by_subject_asc(self):
+        rows = [
+            self._make_entry("NORM-012", "NORM-012.E3"),
+            self._make_entry("NORM-012", "NORM-012.E1"),
+            self._make_entry("NORM-012", "NORM-012.E2"),
+        ]
+        result = group_and_sort(rows)
+        subjects = [h["subject"] for h in result[0][1]["hijas"]]
+        assert subjects == ["NORM-012.E1", "NORM-012.E2", "NORM-012.E3"]
+
+    def test_hijas_not_sorted_by_categoria(self):
+        rows = [
+            self._make_entry("NORM-012", "NORM-012.E1", "VENCIDA"),
+            self._make_entry("NORM-012", "NORM-012.E2", "EN FECHA"),
+        ]
+        result = group_and_sort(rows)
+        subjects = [h["subject"] for h in result[0][1]["hijas"]]
+        assert subjects == ["NORM-012.E1", "NORM-012.E2"]
