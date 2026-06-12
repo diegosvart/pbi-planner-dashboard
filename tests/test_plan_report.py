@@ -6,7 +6,10 @@ from datetime import datetime, timezone, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 import pytest
-from plan_report import extract_code, classify_task, build_parent_index, suggest_bucket
+from plan_report import (
+    extract_code, classify_task, build_parent_index, suggest_bucket,
+    needs_escalation, build_report,
+)
 
 TODAY = datetime(2026, 6, 11, tzinfo=timezone.utc)
 WINDOW_DAYS = 14
@@ -164,3 +167,121 @@ class TestSuggestBucket:
         suggestion = suggest_bucket(entry)
         assert "reason" in suggestion
         assert len(suggestion["reason"]) > 0
+
+
+# ── needs_escalation ──────────────────────────────────────────────────────────
+
+class TestNeedsEscalation:
+    """
+    Regla: VENCIDA + Blocked + overdue > umbral → escalar
+           Otros casos → None
+    """
+
+    def _entry(self, categoria, bucket, dias_vencida):
+        end_dt = TODAY - timedelta(days=dias_vencida)
+        return {
+            "categoria": categoria,
+            "bucket": bucket,
+            "end_dt": end_dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+
+    def test_vencida_blocked_over_umbral_escala(self):
+        entry = self._entry("VENCIDA", "Blocked", 30)
+        result = needs_escalation(entry, TODAY, dias_umbral=14)
+        assert result is not None
+        assert "reason" in result
+        assert "30" in result["reason"]
+
+    def test_vencida_blocked_exactly_umbral_no_escala(self):
+        entry = self._entry("VENCIDA", "Blocked", 14)
+        assert needs_escalation(entry, TODAY, dias_umbral=14) is None
+
+    def test_vencida_blocked_under_umbral_no_escala(self):
+        entry = self._entry("VENCIDA", "Blocked", 10)
+        assert needs_escalation(entry, TODAY, dias_umbral=14) is None
+
+    def test_vencida_in_progress_no_escala(self):
+        entry = self._entry("VENCIDA", "In Progress", 30)
+        assert needs_escalation(entry, TODAY, dias_umbral=14) is None
+
+    def test_en_fecha_blocked_no_escala(self):
+        entry = self._entry("EN FECHA", "Blocked", 0)
+        assert needs_escalation(entry, TODAY, dias_umbral=14) is None
+
+    def test_missing_end_dt_no_escala(self):
+        entry = {"categoria": "VENCIDA", "bucket": "Blocked", "end_dt": ""}
+        assert needs_escalation(entry, TODAY) is None
+
+    def test_reason_mentions_dias(self):
+        entry = self._entry("VENCIDA", "Blocked", 45)
+        result = needs_escalation(entry, TODAY, dias_umbral=14)
+        assert "45" in result["reason"]
+
+
+# ── build_report — phantom task filter ───────────────────────────────────────
+
+def _make_raw_task(task_id, subject, parent_id, end_iso, progress=0.0, bucket_id=None):
+    return {
+        "msdyn_projecttaskid": task_id,
+        "msdyn_subject": subject,
+        "_msdyn_parenttask_value": parent_id,
+        "msdyn_scheduledend": end_iso,
+        "msdyn_progress": progress,
+        "_msdyn_projectbucket_value": bucket_id,
+        "modifiedon": "2026-06-01T00:00:00Z",
+        "msdyn_descriptionplaintext": None,
+        "msdyn_pfwmodifiedby": None,
+    }
+
+
+VENCIDA_END = (TODAY - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+class TestBuildReportPhantom:
+    """build_report debe excluir tareas con subject vacío/whitespace y contar como sin_titulo."""
+
+    def _run(self, tasks):
+        parent_index = {"p1": "NORM-001 - Padre"}
+        return build_report(tasks, {}, None, parent_index, TODAY, WINDOW_DAYS)
+
+    def test_empty_subject_excluded_and_counted(self):
+        tasks = [
+            _make_raw_task("t1", "NORM-001.1 - Tarea real", "p1", VENCIDA_END),
+            _make_raw_task("t2", "", "p1", VENCIDA_END),
+        ]
+        rows, sin_titulo = self._run(tasks)
+        assert len(rows) == 1
+        assert rows[0]["subject"] == "NORM-001.1 - Tarea real"
+        assert sin_titulo == 1
+
+    def test_whitespace_subject_excluded_and_counted(self):
+        tasks = [
+            _make_raw_task("t1", "NORM-001.1 - Tarea real", "p1", VENCIDA_END),
+            _make_raw_task("t2", "   ", "p1", VENCIDA_END),
+        ]
+        rows, sin_titulo = self._run(tasks)
+        assert len(rows) == 1
+        assert sin_titulo == 1
+
+    def test_no_phantom_returns_zero_sin_titulo(self):
+        tasks = [_make_raw_task("t1", "NORM-001.1 - Tarea real", "p1", VENCIDA_END)]
+        rows, sin_titulo = self._run(tasks)
+        assert sin_titulo == 0
+
+    def test_multiple_phantoms_counted_together(self):
+        tasks = [
+            _make_raw_task("t1", "", "p1", VENCIDA_END),
+            _make_raw_task("t2", "", "p1", VENCIDA_END),
+            _make_raw_task("t3", "NORM-001.1 - Real", "p1", VENCIDA_END),
+        ]
+        rows, sin_titulo = self._run(tasks)
+        assert len(rows) == 1
+        assert sin_titulo == 2
+
+    def test_nota_full_stored_in_entry(self):
+        long_nota = "a" * 120
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea real", "p1", VENCIDA_END)
+        task["msdyn_descriptionplaintext"] = long_nota
+        rows, _ = self._run([task])
+        assert len(rows) == 1
+        assert rows[0]["nota"] == long_nota

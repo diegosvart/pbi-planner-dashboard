@@ -4,6 +4,8 @@ Motor parametrizado de extracción Dataverse → reporte de gestión de planes.
 Uso:
     python plan_report.py --plan "Planificación área TI 2026"
     python plan_report.py --project-id <GUID> --window-days 14 --today 2026-06-11 --out report.csv
+    python plan_report.py --plan "..." --cache-file %TEMP%\\ti.json
+    python plan_report.py --from-cache %TEMP%\\ti.json --out report.csv
 
 Requiere: az CLI autenticado con dmorales@grupoebi.cl
           az account get-access-token (tenant b16beb2c-1c93-4497-bc75-5a1cdae6ee6c)
@@ -78,6 +80,22 @@ def suggest_bucket(entry: dict) -> dict | None:
             }
 
     return None
+
+
+def needs_escalation(entry: dict, today: datetime, dias_umbral: int = 14) -> dict | None:
+    """VENCIDA + Blocked + overdue > dias_umbral → escalar."""
+    if entry.get("categoria") != "VENCIDA":
+        return None
+    if entry.get("bucket") != "Blocked":
+        return None
+    end_raw = entry.get("end_dt", "")
+    if not end_raw:
+        return None
+    end_dt = datetime.fromisoformat(end_raw.replace("Z", "+00:00"))
+    dias_vencida = (today - end_dt).days
+    if dias_vencida <= dias_umbral:
+        return None
+    return {"reason": f"Bloqueada y vencida hace {dias_vencida} días — escalar"}
 
 
 # ── Network layer ─────────────────────────────────────────────────────────────
@@ -182,9 +200,16 @@ def resolve_cross_project_parents(token: str, missing_ids: list[str]) -> dict:
 # ── Report builder ────────────────────────────────────────────────────────────
 
 def build_report(tasks: list, buckets: dict, done_id: str | None,
-                 parent_index: dict, today: datetime, window_days: int) -> list:
+                 parent_index: dict, today: datetime, window_days: int) -> tuple[list, int]:
+    """Returns (rows, sin_titulo_count). Excludes tasks with empty/whitespace subject."""
     rows = []
+    sin_titulo = 0
     for t in tasks:
+        subject = (t.get("msdyn_subject") or "").strip()
+        if not subject:
+            sin_titulo += 1
+            continue
+
         parent_id = t.get("_msdyn_parenttask_value")
         if not parent_id:
             continue
@@ -219,11 +244,12 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
         entry = {
             "parent_code": parent_code,
             "parent_subject": parent_subject,
-            "subject": t.get("msdyn_subject", "(sin titulo)"),
+            "subject": subject,
             "responsable": responsable,
             "bucket": bucket_name,
             "mod_str": mod_str,
             "mod_dt": mod_raw or "9999",
+            "nota": nota_raw,
             "nota_preview": nota_preview,
             "tiene_nota": tiene_nota,
             "categoria": categoria,
@@ -232,7 +258,7 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
             "progress": t.get("msdyn_progress") or 0.0,
         }
         rows.append(entry)
-    return rows
+    return rows, sin_titulo
 
 
 def group_and_sort(rows: list) -> list:
@@ -257,8 +283,8 @@ def group_and_sort(rows: list) -> list:
 
 # ── Output ────────────────────────────────────────────────────────────────────
 
-def print_report(padres_sorted: list, today: datetime, plan_label: str):
-    W = 120
+def print_report(padres_sorted: list, today: datetime, plan_label: str, sin_titulo: int = 0):
+    W = 140
     total_v = sum(sum(1 for h in d["hijas"] if h["categoria"] == "VENCIDA") for _, d in padres_sorted)
     total_ef = sum(sum(1 for h in d["hijas"] if h["categoria"] == "EN FECHA") for _, d in padres_sorted)
     total_cn = sum(sum(1 for h in d["hijas"] if h["tiene_nota"]) for _, d in padres_sorted)
@@ -277,16 +303,17 @@ def print_report(padres_sorted: list, today: datetime, plan_label: str):
         cn = sum(1 for h in hijas if h["tiene_nota"])
         marker = " [!]" if v > 0 else ""
         print(f"\n{'-'*W}")
-        print(f"  PADRE: {parent_code}{marker}  ({data['parent_subject'][:60]})")
+        print(f"  PADRE: {parent_code}{marker}  ({data['parent_subject'][:80]})")
         print(f"  Hijas: {len(hijas)}  |  Vencidas: {v}  |  En fecha: {ef}  |  Con nota: {cn}")
         print(f"{'-'*W}")
-        print(f"  {'Tarea':<40} {'Responsable':<25} {'Bucket':<12} {'Fecha fin':<12} {'Ult.Act.':<12} Nota")
-        print(f"  {'-'*40} {'-'*25} {'-'*12} {'-'*12} {'-'*12} {'-'*25}")
+        print(f"  {'Tarea':<55} {'Responsable':<30} {'Bucket':<14} {'Fecha fin':<12} {'Ult.Act.':<12}")
+        print(f"  {'-'*55} {'-'*30} {'-'*14} {'-'*12} {'-'*12}")
         for h in hijas:
             flag = "[!]" if h["categoria"] == "VENCIDA" else "   "
-            nota_ind = "* " + h["nota_preview"][:35] if h["tiene_nota"] else "—"
-            print(f"{flag} {h['subject'][:40]:<40} {h['responsable'][:24]:<25} "
-                  f"{h['bucket'][:11]:<12} {h['end_str']:<12} {h['mod_str']:<12} {nota_ind}")
+            print(f"{flag} {h['subject'][:55]:<55} {h['responsable'][:30]:<30} "
+                  f"{h['bucket'][:13]:<14} {h['end_str']:<12} {h['mod_str']:<12}")
+            if h["tiene_nota"]:
+                print(f"     ↳ {h['nota']}")
 
     print(f"\n{'='*W}")
     print(f"  RESUMEN EJECUTIVO")
@@ -300,14 +327,30 @@ def print_report(padres_sorted: list, today: datetime, plan_label: str):
         print(f"  Sin nota                           : {total-total_cn}  ({(total-total_cn)/total*100:.0f}%)")
     print(f"{'='*W}")
 
-    _print_analysis(padres_sorted)
+    _print_analysis(padres_sorted, today, sin_titulo)
 
 
-def _print_analysis(padres_sorted: list):
-    W = 120
+def _print_analysis(padres_sorted: list, today: datetime, sin_titulo: int = 0):
+    W = 140
     print(f"\n{'='*W}")
     print(f"  RECOMENDACIONES DE GESTIÓN")
     print(f"{'='*W}")
+
+    # Escalamiento — bloqueadas vencidas críticas
+    escalaciones = []
+    for _, data in padres_sorted:
+        for h in data["hijas"]:
+            e = needs_escalation(h, today)
+            if e:
+                escalaciones.append((h["subject"][:60], h["responsable"], e["reason"]))
+
+    if escalaciones:
+        print(f"\n  [Escalamiento — Bloqueadas vencidas críticas]")
+        for subj, resp, reason in escalaciones:
+            print(f"  ⚠ {subj}")
+            print(f"    Responsable: {resp}  |  {reason}")
+    else:
+        print(f"\n  [Escalamiento] Sin tareas bloqueadas-vencidas críticas.")
 
     # Sugerencias de bucket
     bucket_suggestions = []
@@ -315,7 +358,7 @@ def _print_analysis(padres_sorted: list):
         for h in data["hijas"]:
             s = suggest_bucket(h)
             if s:
-                bucket_suggestions.append((h["subject"][:50], h["bucket"], s["target_bucket"], s["reason"]))
+                bucket_suggestions.append((h["subject"][:55], h["bucket"], s["target_bucket"], s["reason"]))
 
     if bucket_suggestions:
         print(f"\n  [Cambios de bucket sugeridos]")
@@ -347,9 +390,13 @@ def _print_analysis(padres_sorted: list):
         for h in d["hijas"] if h["categoria"] == "VENCIDA" and not h["tiene_nota"]
     )
     print(f"\n  [Calidad de datos]")
+    if sin_titulo:
+        print(f"  ⚠ {sin_titulo} tarea(s) sin título encontradas — excluidas del reporte (datos incompletos en Planner).")
     if sin_nota_vencidas:
         print(f"  ⚠ {sin_nota_vencidas} tarea(s) vencida(s) SIN nota de gestión — riesgo alto, sin visibilidad de bloqueo.")
-    else:
+    if not sin_titulo and not sin_nota_vencidas:
+        print(f"  ✓ Sin problemas de calidad detectados.")
+    elif not sin_nota_vencidas:
         print(f"  ✓ Todas las tareas vencidas tienen nota de gestión registrada.")
 
     print(f"{'='*W}")
@@ -368,7 +415,7 @@ def write_csv(padres_sorted: list, out_path: str):
                 "UltimaActualizacion": h["mod_str"],
                 "Categoria": h["categoria"],
                 "TieneNota": "Si" if h["tiene_nota"] else "No",
-                "Nota": h["nota_preview"],
+                "Nota": h["nota"],
             })
     if not rows:
         print("  (sin filas para exportar)")
@@ -388,13 +435,20 @@ def main():
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
     parser = argparse.ArgumentParser(description="Reporte de gestión de plan — Dataverse")
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--plan", help="Nombre parcial del plan (busca en msdyn_projects)")
-    group.add_argument("--project-id", help="GUID exacto del proyecto")
+    source_group = parser.add_mutually_exclusive_group()
+    source_group.add_argument("--plan", help="Nombre parcial del plan (busca en msdyn_projects)")
+    source_group.add_argument("--project-id", help="GUID exacto del proyecto")
+    source_group.add_argument("--from-cache", metavar="FILE",
+                              help="Cargar datos desde caché JSON (sin consultar Dataverse)")
+    parser.add_argument("--cache-file", metavar="FILE",
+                        help="Guardar datos crudos en caché JSON tras la extracción")
     parser.add_argument("--window-days", type=int, default=14, help="Ventana 'en fecha' en días (default: 14)")
     parser.add_argument("--today", help="Fecha de referencia YYYY-MM-DD (default: hoy)")
     parser.add_argument("--out", help="Ruta CSV de salida (opcional)")
     args = parser.parse_args()
+
+    if not args.from_cache and not args.plan and not args.project_id:
+        parser.error("Se requiere --plan, --project-id, o --from-cache")
 
     today_dt = (
         datetime.strptime(args.today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
@@ -402,41 +456,73 @@ def main():
         else datetime.now(tz=timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     )
 
-    print("  Obteniendo token Azure...")
-    token = get_token()
-
-    if args.project_id:
-        project_id = args.project_id
-        plan_label = f"Proyecto {project_id[:8]}..."
+    if args.from_cache:
+        print(f"  Cargando datos desde caché: {args.from_cache}")
+        with open(args.from_cache, encoding="utf-8") as f:
+            cache = json.load(f)
+        project_id = cache["project_id"]
+        plan_label = cache["plan_label"]
+        buckets = cache["buckets"]
+        done_id = cache.get("done_id")
+        tasks = cache["tasks"]
+        parent_index = build_parent_index(tasks)
+        all_parent_ids = {t["_msdyn_parenttask_value"] for t in tasks if t.get("_msdyn_parenttask_value")}
+        missing_in_cache = [pid for pid in all_parent_ids if pid not in parent_index]
+        if missing_in_cache and "extra_parents" in cache:
+            parent_index.update(cache["extra_parents"])
+        print(f"  {len(tasks)} tareas cargadas desde caché.")
     else:
-        print(f"  Buscando plan '{args.plan}'...")
-        project_id = resolve_project_id(token, args.plan)
-        plan_label = args.plan
+        print("  Obteniendo token Azure...")
+        token = get_token()
 
-    print("  Resolviendo buckets...")
-    buckets, done_id = resolve_buckets(token, project_id)
-    print(f"  Buckets encontrados: {list(buckets.values())}  |  Done id: {done_id}")
+        if args.project_id:
+            project_id = args.project_id
+            plan_label = f"Proyecto {project_id[:8]}..."
+        else:
+            print(f"  Buscando plan '{args.plan}'...")
+            project_id = resolve_project_id(token, args.plan)
+            plan_label = args.plan
 
-    print("  Descargando tareas...")
-    tasks = fetch_tasks(token, project_id)
-    print(f"  {len(tasks)} tareas descargadas.")
+        print("  Resolviendo buckets...")
+        buckets, done_id = resolve_buckets(token, project_id)
+        print(f"  Buckets encontrados: {list(buckets.values())}  |  Done id: {done_id}")
 
-    parent_index = build_parent_index(tasks)
+        print("  Descargando tareas...")
+        tasks = fetch_tasks(token, project_id)
+        print(f"  {len(tasks)} tareas descargadas.")
 
-    # Resolver padres cross-proyecto
-    all_parent_ids = {t["_msdyn_parenttask_value"] for t in tasks if t.get("_msdyn_parenttask_value")}
-    missing_ids = [pid for pid in all_parent_ids if pid not in parent_index]
-    if missing_ids:
-        print(f"  Resolviendo {len(missing_ids)} padre(s) cross-proyecto...")
-        extra = resolve_cross_project_parents(token, missing_ids)
-        parent_index.update(extra)
+        parent_index = build_parent_index(tasks)
 
-    rows = build_report(tasks, buckets, done_id, parent_index, today_dt, args.window_days)
+        all_parent_ids = {t["_msdyn_parenttask_value"] for t in tasks if t.get("_msdyn_parenttask_value")}
+        missing_ids = [pid for pid in all_parent_ids if pid not in parent_index]
+        extra_parents = {}
+        if missing_ids:
+            print(f"  Resolviendo {len(missing_ids)} padre(s) cross-proyecto...")
+            extra_parents = resolve_cross_project_parents(token, missing_ids)
+            parent_index.update(extra_parents)
+
+        if args.cache_file:
+            cache_data = {
+                "plan_label": plan_label,
+                "project_id": project_id,
+                "buckets": buckets,
+                "done_id": done_id,
+                "tasks": tasks,
+                "extra_parents": extra_parents,
+            }
+            with open(args.cache_file, "w", encoding="utf-8") as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+            print(f"  Caché guardada: {args.cache_file}")
+
+    rows, sin_titulo = build_report(tasks, buckets, done_id, parent_index, today_dt, args.window_days)
     padres_sorted = group_and_sort(rows)
-    print_report(padres_sorted, today_dt, plan_label)
+    print_report(padres_sorted, today_dt, plan_label, sin_titulo)
 
     if args.out:
         write_csv(padres_sorted, args.out)
+    elif args.cache_file:
+        print(f"\n  Para exportar a CSV sin re-consultar Dataverse:")
+        print(f"  python scripts/plan_report.py --from-cache {args.cache_file} --out <ruta.csv>")
 
 
 if __name__ == "__main__":
