@@ -83,8 +83,10 @@ def suggest_bucket(entry: dict) -> dict | None:
 # ── Network layer ─────────────────────────────────────────────────────────────
 
 def get_token() -> str:
+    import shutil
+    az_cmd = shutil.which("az") or r"C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd"
     result = subprocess.run(
-        ["az", "account", "get-access-token",
+        [az_cmd, "account", "get-access-token",
          "--resource", f"https://{ORG}",
          "--tenant", TENANT,
          "--query", "accessToken", "-o", "tsv"],
@@ -99,6 +101,8 @@ def get_token() -> str:
 
 
 def odata_get(token: str, url: str) -> dict:
+    # urllib.request rejects URLs with literal spaces — encode them
+    url = url.replace(" ", "%20")
     req = urllib.request.Request(url, headers={
         "Authorization": f"Bearer {token}",
         "Accept": "application/json",
