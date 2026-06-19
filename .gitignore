@@ -19,3 +19,16 @@ desktop.ini
 
 # Backups de sesión (mantener solo el actual)
 aura-agent-kit/.agent/memory/backups/
+
+# Outputs locales del plan-reporter
+reporte_ti_2026_*.csv
+
+# Cache Python
+**/__pycache__/
+**/*.pyc
+
+# VS Code local
+.vscode/
+
+# Agente local
+.agent/

@@ -39,11 +39,13 @@ def extract_code(subject: str | None) -> str | None:
     return m.group(1) if m else None
 
 
-def classify_task(end_dt: datetime, today: datetime) -> str | None:
+def classify_task(end_dt: datetime, today: datetime, start_dt: datetime | None = None) -> str | None:
     if end_dt.date() < today.date():
         return "VENCIDA"
     if end_dt.date() == today.date():
         return "EN FECHA"
+    if start_dt is not None and start_dt.date() <= today.date():
+        return "EN CURSO"
     return None
 
 
@@ -173,7 +175,7 @@ def resolve_buckets(token: str, project_id: str) -> tuple[dict, str | None]:
 def fetch_tasks(token: str, project_id: str) -> list:
     fields = ",".join([
         "msdyn_projecttaskid", "msdyn_subject", "msdyn_progress",
-        "msdyn_scheduledend", "modifiedon", "msdyn_descriptionplaintext",
+        "msdyn_scheduledstart", "msdyn_scheduledend", "modifiedon", "msdyn_descriptionplaintext",
         "_msdyn_parenttask_value", "_msdyn_projectbucket_value", "statecode",
     ])
     url = (f"{BASE_URL}/msdyn_projecttasks"
@@ -224,7 +226,10 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
         if not end_raw:
             continue
         end_dt = datetime.fromisoformat(end_raw.replace("Z", "+00:00"))
-        categoria = classify_task(end_dt, today)
+        start_raw = t.get("msdyn_scheduledstart")
+        start_dt = (datetime.fromisoformat(start_raw.replace("Z", "+00:00"))
+                    if start_raw else None)
+        categoria = classify_task(end_dt, today, start_dt=start_dt)
         if categoria is None:
             continue
 
@@ -283,31 +288,33 @@ def print_report(padres_sorted: list, today: datetime, plan_label: str, sin_titu
     W = 140
     total_v = sum(sum(1 for h in d["hijas"] if h["categoria"] == "VENCIDA") for _, d in padres_sorted)
     total_ef = sum(sum(1 for h in d["hijas"] if h["categoria"] == "EN FECHA") for _, d in padres_sorted)
+    total_ec = sum(sum(1 for h in d["hijas"] if h["categoria"] == "EN CURSO") for _, d in padres_sorted)
     total_cn = sum(sum(1 for h in d["hijas"] if h["tiene_nota"]) for _, d in padres_sorted)
-    total = total_v + total_ef
+    total = total_v + total_ef + total_ec
 
     print(f"\n{'='*W}")
     print(f"  REPORTE DE GESTIÓN — {plan_label}")
-    print("  Hijas accionables (vencidas o en fecha), bucket != Done")
+    print("  Hijas accionables (vencidas, en fecha o en curso), bucket != Done")
     print(f"  Fecha referencia: {today.strftime('%d-%m-%Y')}")
     print(f"{'='*W}")
 
     for parent_code, data in padres_sorted:
         hijas = data["hijas"]
         v = sum(1 for h in hijas if h["categoria"] == "VENCIDA")
-        ef = len(hijas) - v
+        ef = sum(1 for h in hijas if h["categoria"] == "EN FECHA")
+        ec = sum(1 for h in hijas if h["categoria"] == "EN CURSO")
         cn = sum(1 for h in hijas if h["tiene_nota"])
         marker = " [!]" if v > 0 else ""
         print(f"\n{'-'*W}")
         print(f"  PADRE: {parent_code}{marker}  ({data['parent_subject'][:80]})")
-        print(f"  Hijas: {len(hijas)}  |  Vencidas: {v}  |  En fecha: {ef}  |  Con nota: {cn}")
+        print(f"  Hijas: {len(hijas)}  |  Vencidas: {v}  |  En fecha: {ef}  |  En curso: {ec}  |  Con nota: {cn}")
         print(f"{'-'*W}")
-        print(f"  {'Tarea':<55} {'Responsable':<30} {'Bucket':<14} {'Fecha fin':<12} {'Ult.Act.':<12}")
-        print(f"  {'-'*55} {'-'*30} {'-'*14} {'-'*12} {'-'*12}")
+        print(f"  {'Tarea':<55} {'Responsable':<30} {'Bucket':<14} {'Fecha fin':<12} {'Ult.Act.':<12} {'Estado':<10}")
+        print(f"  {'-'*55} {'-'*30} {'-'*14} {'-'*12} {'-'*12} {'-'*10}")
         for h in hijas:
             flag = "[!]" if h["categoria"] == "VENCIDA" else "   "
             print(f"{flag} {h['subject'][:55]:<55} {h['responsable'][:30]:<30} "
-                  f"{h['bucket'][:13]:<14} {h['end_str']:<12} {h['mod_str']:<12}")
+                  f"{h['bucket'][:13]:<14} {h['end_str']:<12} {h['mod_str']:<12} {h['categoria']:<10}")
             if h["tiene_nota"]:
                 print(f"     ↳ {h['nota']}")
 
@@ -317,7 +324,8 @@ def print_report(padres_sorted: list, today: datetime, plan_label: str, sin_titu
     print(f"  Grupos padre con hijas accionables : {len(padres_sorted)}")
     print(f"  Total hijas accionables            : {total}")
     print(f"  Vencidas                           : {total_v}")
-    print(f"  En fecha (próximas <= ventana)     : {total_ef}")
+    print(f"  En fecha hoy                       : {total_ef}")
+    print(f"  En curso (inicio pasó, fin futuro) : {total_ec}")
     if total:
         print(f"  Con nota de gestión                : {total_cn}  ({total_cn/total*100:.0f}%)")
         print(f"  Sin nota                           : {total-total_cn}  ({(total-total_cn)/total*100:.0f}%)")
@@ -404,6 +412,7 @@ def write_csv(padres_sorted: list, out_path: str):
         for h in data["hijas"]:
             rows.append({
                 "ParentTaskCode": parent_code,
+                "ParentTaskName": data["parent_subject"],
                 "TaskName": h["subject"],
                 "Responsable": h["responsable"],
                 "Bucket": h["bucket"],
@@ -412,6 +421,7 @@ def write_csv(padres_sorted: list, out_path: str):
                 "Categoria": h["categoria"],
                 "TieneNota": "Si" if h["tiene_nota"] else "No",
                 "Nota": h["nota"],
+                "Avance": f"{h.get('progress', 0.0)*100:.0f}%",
             })
     if not rows:
         print("  (sin filas para exportar)")

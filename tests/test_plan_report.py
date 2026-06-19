@@ -78,6 +78,79 @@ class TestClassifyTask:
         assert classify_task(end, TODAY) is None
 
 
+# ── classify_task — EN CURSO (IsLive alignment) ───────────────────────────────
+
+class TestClassifyTaskEnCurso:
+    """start_dt <= today <= end_dt → EN CURSO (equivale a IsLive del dashboard)."""
+
+    def test_started_not_yet_due_is_en_curso(self):
+        start = TODAY - timedelta(days=5)
+        end = TODAY + timedelta(days=10)
+        assert classify_task(end, TODAY, start_dt=start) == "EN CURSO"
+
+    def test_started_today_due_future_is_en_curso(self):
+        start = TODAY
+        end = TODAY + timedelta(days=3)
+        assert classify_task(end, TODAY, start_dt=start) == "EN CURSO"
+
+    def test_not_yet_started_future_due_is_none(self):
+        start = TODAY + timedelta(days=1)
+        end = TODAY + timedelta(days=10)
+        assert classify_task(end, TODAY, start_dt=start) is None
+
+    def test_no_start_dt_future_is_none(self):
+        end = TODAY + timedelta(days=5)
+        assert classify_task(end, TODAY, start_dt=None) is None
+
+    def test_overdue_with_start_still_vencida(self):
+        # VENCIDA toma precedencia sobre EN CURSO
+        start = TODAY - timedelta(days=10)
+        end = TODAY - timedelta(days=1)
+        assert classify_task(end, TODAY, start_dt=start) == "VENCIDA"
+
+    def test_due_today_with_start_is_en_fecha(self):
+        start = TODAY - timedelta(days=3)
+        assert classify_task(TODAY, TODAY, start_dt=start) == "EN FECHA"
+
+
+# ── build_report — EN CURSO tasks included ────────────────────────────────────
+
+class TestBuildReportEnCurso:
+    """Tareas en curso (start <= today < end) deben aparecer en el reporte."""
+
+    def _run(self, tasks):
+        parent_index = {"p1": "NORM-001 - Padre"}
+        return build_report(tasks, {}, None, parent_index, TODAY)
+
+    def test_en_curso_task_included(self):
+        start = (TODAY - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        end = (TODAY + timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        task = _make_raw_task("t1", "NORM-001.1 - En curso", "p1", end)
+        task["msdyn_scheduledstart"] = start
+        rows, _ = self._run([task])
+        assert len(rows) == 1
+        assert rows[0]["categoria"] == "EN CURSO"
+
+    def test_not_started_future_excluded(self):
+        start = (TODAY + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        end = (TODAY + timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        task = _make_raw_task("t1", "NORM-001.1 - Futura", "p1", end)
+        task["msdyn_scheduledstart"] = start
+        rows, _ = self._run([task])
+        assert rows == []
+
+    def test_no_start_future_excluded(self):
+        end = (TODAY + timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        task = _make_raw_task("t1", "NORM-001.1 - Sin start", "p1", end)
+        rows, _ = self._run([task])
+        assert rows == []
+
+    def test_vencida_without_start_still_included(self):
+        rows, _ = self._run([_make_raw_task("t1", "NORM-001.1 - Vencida", "p1", VENCIDA_END)])
+        assert len(rows) == 1
+        assert rows[0]["categoria"] == "VENCIDA"
+
+
 # ── build_parent_index ────────────────────────────────────────────────────────
 
 class TestBuildParentIndex:
