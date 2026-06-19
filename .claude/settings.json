@@ -67,6 +67,7 @@
       }
     ]
   },
+  "enableAllProjectMcpServers": true,
   "permissions": {
     "allow": [
       "Bash(git:*)",
