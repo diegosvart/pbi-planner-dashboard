@@ -202,20 +202,17 @@ def write_csv_pmo(rows: list, out) -> None:
         }
         for h in rows
     ]
-    if isinstance(out, str):
-        f = open(out, "w", encoding="utf-8-sig", newline="")
-        should_close = True
-    else:
-        f = out
-        should_close = False
+    f = None
+    should_close = isinstance(out, str)
     try:
+        f = open(out, "w", encoding="utf-8-sig", newline="") if should_close else out
         writer = csv.DictWriter(f, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(csv_rows)
     finally:
-        if should_close:
+        if should_close and f is not None:
             f.close()
-    if isinstance(out, str):
+    if should_close:
         print(f"\n  CSV PMO exportado: {out}  ({len(csv_rows)} filas)")
 
 
@@ -564,33 +561,6 @@ def _print_analysis(padres_sorted: list, today: datetime, sin_titulo: int = 0):
         print("  ✓ Todas las tareas vencidas tienen nota de gestión registrada.")
 
     print(f"{'='*W}")
-
-
-def write_csv(padres_sorted: list, out_path: str):
-    rows = []
-    for parent_code, data in padres_sorted:
-        for h in data["hijas"]:
-            rows.append({
-                "ParentTaskCode": parent_code,
-                "ParentTaskName": data["parent_subject"],
-                "TaskName": h["subject"],
-                "Responsable": h["responsable"],
-                "Bucket": h["bucket"],
-                "FechaFin": h["end_str"],
-                "UltimaActualizacion": h["mod_str"],
-                "Categoria": h["categoria"],
-                "TieneNota": "Si" if h["tiene_nota"] else "No",
-                "Nota": h["nota"],
-                "Avance": f"{h.get('progress', 0.0)*100:.0f}%",
-            })
-    if not rows:
-        print("  (sin filas para exportar)")
-        return
-    with open(out_path, "w", encoding="utf-8-sig", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
-        writer.writeheader()
-        writer.writerows(rows)
-    print(f"\n  CSV exportado: {out_path}  ({len(rows)} filas)")
 
 
 # ── CLI entry point ───────────────────────────────────────────────────────────
