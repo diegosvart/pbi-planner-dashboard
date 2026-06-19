@@ -12,6 +12,7 @@ Requiere: az CLI autenticado con dmorales@grupoebi.cl
 """
 import argparse
 import csv
+import html as _html
 import io
 import json
 import re
@@ -81,6 +82,141 @@ def suggest_bucket(entry: dict) -> dict | None:
             }
 
     return None
+
+
+def strip_html(text: str) -> str:
+    """Removes HTML tags and decodes entities. Collapses whitespace."""
+    if not text:
+        return ""
+    clean = re.sub(r"<[^>]+>", " ", text)
+    clean = _html.unescape(clean)
+    return re.sub(r"\s+", " ", clean).strip()
+
+
+def build_checklist_index(records: list) -> dict:
+    """Converts checklist records to {task_id: 'N/M'} dict."""
+    groups: dict[str, dict] = {}
+    for r in records:
+        tid = r.get("_msdyn_projecttaskid_value")
+        if not tid:
+            continue
+        if tid not in groups:
+            groups[tid] = {"total": 0, "done": 0}
+        groups[tid]["total"] += 1
+        if r.get("msdyn_projectchecklistcompleted"):
+            groups[tid]["done"] += 1
+    return {tid: f"{g['done']}/{g['total']}" for tid, g in groups.items()}
+
+
+def assign_criticality_level(entry: dict, today: datetime) -> int:
+    """Returns criticality level 1-7 per SDD section 3.2."""
+    categoria = entry.get("categoria", "")
+    bucket = entry.get("bucket", "")
+    tiene_nota = entry.get("tiene_nota", False)
+    end_raw = entry.get("end_dt", "")
+
+    if categoria == "VENCIDA":
+        if bucket == "Blocked":
+            return 1
+        return 2 if not tiene_nota else 3
+
+    if categoria == "EN FECHA":
+        return 4
+
+    # EN CURSO — days remaining
+    if end_raw:
+        end_dt = datetime.fromisoformat(end_raw.replace("Z", "+00:00"))
+        days_remaining = (end_dt.date() - today.date()).days
+        if days_remaining <= 3:
+            return 5
+        if days_remaining <= 7:
+            return 6
+    return 7
+
+
+def suggest_action(entry: dict, today: datetime, dias_umbral: int = 14) -> str:
+    """Returns a management action suggestion string, or '' if none."""
+    categoria = entry.get("categoria", "")
+    bucket = entry.get("bucket", "")
+    tiene_nota = entry.get("tiene_nota", False)
+    nota = (entry.get("nota_preview") or "").lower()
+    end_raw = entry.get("end_dt", "")
+
+    # Escalation (highest priority — overrides bucket suggestions)
+    if categoria == "VENCIDA" and end_raw:
+        end_dt = datetime.fromisoformat(end_raw.replace("Z", "+00:00"))
+        dias_vencida = (today - end_dt).days
+        if dias_vencida > dias_umbral:
+            if bucket == "Blocked":
+                return f"Bloqueada y vencida hace {dias_vencida} días — escalar con responsable"
+            if not tiene_nota:
+                return f"Sin gestión registrada hace {dias_vencida} días — escalar con responsable"
+
+    # Bucket corrections
+    if categoria == "VENCIDA" and tiene_nota and bucket != "Blocked":
+        return "Tarea vencida con nota de gestión — mover a Blocked"
+
+    if bucket == "Blocked" and tiene_nota:
+        if any(kw in nota for kw in UNBLOCK_KEYWORDS):
+            return "Nota sugiere resolución — mover a In Progress"
+
+    return ""
+
+
+def sort_by_criticality(rows: list, today: datetime) -> list:
+    """Sorts flat list by (criticality_level, days_to_end asc)."""
+    def sort_key(entry):
+        level = assign_criticality_level(entry, today)
+        end_raw = entry.get("end_dt", "")
+        days = 0
+        if end_raw:
+            end_dt = datetime.fromisoformat(end_raw.replace("Z", "+00:00"))
+            days = (end_dt.date() - today.date()).days
+        return (level, days)
+    return sorted(rows, key=sort_key)
+
+
+def write_csv_pmo(rows: list, out) -> None:
+    """
+    Writes flat PMO CSV with 13 approved columns (SDD section 6.1).
+    out: str path or file-like object (StringIO for tests).
+    """
+    FIELDS = ["Codigo", "TareaPadre", "Tarea", "Responsable", "Estado",
+              "NivelCriticidad", "Bucket", "Nota", "Checklist",
+              "FechaInicio", "FechaFin", "UltimaActualizacion", "SugerenciaAI"]
+    csv_rows = [
+        {
+            "Codigo": h.get("parent_code", ""),
+            "TareaPadre": h.get("parent_subject", ""),
+            "Tarea": h.get("subject", ""),
+            "Responsable": h.get("responsable", ""),
+            "Estado": h.get("categoria", ""),
+            "NivelCriticidad": str(h.get("nivel_criticidad", "")),
+            "Bucket": h.get("bucket", ""),
+            "Nota": h.get("nota", ""),
+            "Checklist": h.get("checklist", ""),
+            "FechaInicio": h.get("start_str", ""),
+            "FechaFin": h.get("end_str", ""),
+            "UltimaActualizacion": h.get("mod_str", ""),
+            "SugerenciaAI": h.get("suggest_action_text", ""),
+        }
+        for h in rows
+    ]
+    if isinstance(out, str):
+        f = open(out, "w", encoding="utf-8-sig", newline="")
+        should_close = True
+    else:
+        f = out
+        should_close = False
+    try:
+        writer = csv.DictWriter(f, fieldnames=FIELDS)
+        writer.writeheader()
+        writer.writerows(csv_rows)
+    finally:
+        if should_close:
+            f.close()
+    if isinstance(out, str):
+        print(f"\n  CSV PMO exportado: {out}  ({len(csv_rows)} filas)")
 
 
 def needs_escalation(entry: dict, today: datetime, dias_umbral: int = 14) -> dict | None:
@@ -175,8 +311,9 @@ def resolve_buckets(token: str, project_id: str) -> tuple[dict, str | None]:
 def fetch_tasks(token: str, project_id: str) -> list:
     fields = ",".join([
         "msdyn_projecttaskid", "msdyn_subject", "msdyn_progress",
-        "msdyn_scheduledstart", "msdyn_scheduledend", "modifiedon", "msdyn_descriptionplaintext",
+        "msdyn_scheduledstart", "msdyn_scheduledend", "modifiedon", "msdyn_description",
         "_msdyn_parenttask_value", "_msdyn_projectbucket_value", "statecode",
+        "msdyn_summary", "msdyn_outlinelevel",
     ])
     url = (f"{BASE_URL}/msdyn_projecttasks"
            f"?$filter=_msdyn_project_value eq {project_id}"
@@ -184,6 +321,26 @@ def fetch_tasks(token: str, project_id: str) -> list:
            f"&$expand=msdyn_pfwmodifiedby($select=fullname)"
            f"&$top=500")
     return fetch_all_pages(token, url)
+
+
+def fetch_checklists(token: str, task_ids: list) -> list:
+    """Fetches msdyn_projectchecklists for the given task_ids (batched)."""
+    if not task_ids:
+        return []
+    BATCH = 30
+    all_records = []
+    for i in range(0, len(task_ids), BATCH):
+        batch = task_ids[i:i + BATCH]
+        filter_parts = " or ".join(
+            f"_msdyn_projecttaskid_value eq {tid}" for tid in batch
+        )
+        url = (f"{BASE_URL}/msdyn_projectchecklists"
+               f"?$filter={urllib.parse.quote(filter_parts)}"
+               f"&$select=msdyn_projectchecklistid,_msdyn_projecttaskid_value"
+               f",msdyn_name,msdyn_projectchecklistcompleted,msdyn_projectchecklistorder"
+               f"&$orderby=msdyn_projectchecklistorder asc&$top=500")
+        all_records.extend(fetch_all_pages(token, url))
+    return all_records
 
 
 def resolve_cross_project_parents(token: str, missing_ids: list[str]) -> dict:
@@ -240,15 +397,17 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
         mod_str = (datetime.fromisoformat(mod_raw.replace("Z", "+00:00")).strftime("%d-%m-%Y")
                    if mod_raw else "?")
 
-        nota_raw = (t.get("msdyn_descriptionplaintext") or "").strip()
+        nota_raw = strip_html(t.get("msdyn_description") or "")
         tiene_nota = bool(nota_raw)
         nota_preview = (nota_raw[:80] + "...") if len(nota_raw) > 80 else nota_raw
 
         parent_subject = parent_index.get(parent_id, "(padre desconocido)")
         parent_code = extract_code(parent_subject) or parent_subject[:30]
         bucket_name = buckets.get(bucket_id, f"Bucket-{(bucket_id or '')[:8]}")
+        start_str = start_dt.strftime("%d-%m-%Y") if start_dt else ""
 
         entry = {
+            "task_id": t["msdyn_projecttaskid"],
             "parent_code": parent_code,
             "parent_subject": parent_subject,
             "subject": subject,
@@ -262,6 +421,7 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
             "categoria": categoria,
             "end_dt": end_raw,
             "end_str": end_dt.strftime("%d-%m-%Y"),
+            "start_str": start_str,
             "progress": t.get("msdyn_progress") or 0.0,
         }
         rows.append(entry)
@@ -520,11 +680,29 @@ def main():
             print(f"  Caché guardada: {args.cache_file}")
 
     rows, sin_titulo = build_report(tasks, buckets, done_id, parent_index, today_dt)
+
+    # Enrich: checklists (skip in cache mode to avoid extra network call)
+    if rows and not args.from_cache:
+        print("  Consultando listas de comprobación...")
+        task_ids = [r["task_id"] for r in rows]
+        checklist_records = fetch_checklists(token, task_ids)
+        checklist_index = build_checklist_index(checklist_records)
+        print(f"  Checklists encontrados: {len(checklist_index)} tareas con ítems")
+    else:
+        checklist_index = {}
+
+    # Enrich each row with criticality, checklist, and AI suggestion
+    for r in rows:
+        r["checklist"] = checklist_index.get(r["task_id"], "")
+        r["nivel_criticidad"] = assign_criticality_level(r, today_dt)
+        r["suggest_action_text"] = suggest_action(r, today_dt)
+
+    rows_sorted = sort_by_criticality(rows, today_dt)
     padres_sorted = group_and_sort(rows)
     print_report(padres_sorted, today_dt, plan_label, sin_titulo)
 
     if args.out:
-        write_csv(padres_sorted, args.out)
+        write_csv_pmo(rows_sorted, args.out)
     elif args.cache_file:
         print("\n  Para exportar a CSV sin re-consultar Dataverse:")
         print(f"  python scripts/plan_report.py --from-cache {args.cache_file} --out <ruta.csv>")
