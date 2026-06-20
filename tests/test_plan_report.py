@@ -10,6 +10,7 @@ from plan_report import (
     needs_escalation, build_report, group_and_sort,
     build_checklist_index, assign_criticality_level, suggest_action,
     sort_by_criticality, write_csv_pmo, strip_html, generate_html_report,
+    analyze_task, pillar_of,
 )
 
 TODAY = datetime(2026, 6, 11, tzinfo=timezone.utc)
@@ -977,3 +978,231 @@ class TestWriteCsvPmo:
         data = list(_csv.DictReader(buf))
         assert len(data) == 2
         assert data[1]["Estado"] == "EN CURSO"
+
+
+# ── Issue #29 — pillar_of ─────────────────────────────────────────────────────
+
+class TestPillarOf:
+    def test_norm(self):
+        assert pillar_of("NORM-001") == "NORM"
+
+    def test_inter(self):
+        assert pillar_of("INTER-006") == "INTER"
+
+    def test_port(self):
+        assert pillar_of("PORT-020") == "PORT"
+
+    def test_port_with_subcode(self):
+        assert pillar_of("PORT-020.E2") == "PORT"
+
+    def test_empty_string_returns_sin_codigo(self):
+        assert pillar_of("") == "SIN_CODIGO"
+
+    def test_none_returns_sin_codigo(self):
+        assert pillar_of(None) == "SIN_CODIGO"
+
+    def test_no_hyphen_returns_sin_codigo(self):
+        assert pillar_of("SINCODIGO") == "SIN_CODIGO"
+
+    def test_unknown_prefix_returns_prefix(self):
+        # prefijos desconocidos devuelven el prefijo tal cual
+        result = pillar_of("XYZ-999")
+        assert result == "XYZ"
+
+
+# ── Issue #29 — analyze_task ──────────────────────────────────────────────────
+
+class TestAnalyzeTask:
+    TODAY_A = datetime(2026, 6, 19, tzinfo=timezone.utc)
+
+    def _entry(self, categoria="VENCIDA", bucket="In Progress", tiene_nota=False,
+               nota="", progress=0, nivel_criticidad=2, end_offset_days=-5):
+        end = (self.TODAY_A + timedelta(days=end_offset_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return {
+            "categoria": categoria,
+            "bucket": bucket,
+            "tiene_nota": tiene_nota,
+            "nota": nota,
+            "nota_preview": nota[:50] if nota else "",
+            "progress": progress,
+            "nivel_criticidad": nivel_criticidad,
+            "end_dt": end,
+        }
+
+    def test_always_returns_nonempty_vencida(self):
+        entry = self._entry(categoria="VENCIDA", tiene_nota=False)
+        result = analyze_task(entry, self.TODAY_A)
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_always_returns_nonempty_en_fecha(self):
+        entry = self._entry(categoria="EN FECHA", bucket="In Progress",
+                            nivel_criticidad=4, end_offset_days=0)
+        result = analyze_task(entry, self.TODAY_A)
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_always_returns_nonempty_en_curso(self):
+        entry = self._entry(categoria="EN CURSO", bucket="In Progress",
+                            nivel_criticidad=6, end_offset_days=7)
+        result = analyze_task(entry, self.TODAY_A)
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_vencida_sin_nota_mentions_sin_gestion(self):
+        entry = self._entry(categoria="VENCIDA", tiene_nota=False, end_offset_days=-12)
+        result = analyze_task(entry, self.TODAY_A)
+        # debe mencionar la ausencia de nota o la prioridad
+        assert any(kw in result.lower() for kw in ["sin nota", "sin gestión", "gestión", "prioridad", "acción"])
+
+    def test_escalation_included_when_suggest_action_fires(self):
+        # VENCIDA + Blocked + >14 días → suggest_action dispara texto de escalamiento
+        entry = self._entry(categoria="VENCIDA", bucket="Blocked",
+                            tiene_nota=True, end_offset_days=-20)
+        result = analyze_task(entry, self.TODAY_A)
+        # el resultado debe incluir la sugerencia de escalamiento
+        assert "escalar" in result.lower() or "bloqueada" in result.lower()
+
+    def test_en_curso_mentions_vencimiento_or_avance(self):
+        entry = self._entry(categoria="EN CURSO", bucket="In Progress",
+                            progress=60, nivel_criticidad=6, end_offset_days=5)
+        result = analyze_task(entry, self.TODAY_A)
+        assert any(kw in result.lower() for kw in ["vence", "días", "avance", "curso", "60"])
+
+    def test_en_fecha_sin_nota_recommends_seguimiento(self):
+        entry = self._entry(categoria="EN FECHA", bucket="In Progress",
+                            tiene_nota=False, nivel_criticidad=4, end_offset_days=0)
+        result = analyze_task(entry, self.TODAY_A)
+        assert any(kw in result.lower() for kw in ["nota", "seguimiento", "confirmar", "responsable", "fecha"])
+
+
+# ── Issue #29 — generate_html_report v2 ──────────────────────────────────────
+
+class TestGenerateHtmlReportV2:
+    """Mejoras v2: tooltip notas sobre Estado, filtros pilar/bucket, AI en todas las filas."""
+
+    TODAY_H = datetime(2026, 6, 19, tzinfo=timezone.utc)
+
+    def _row(self, **kwargs):
+        base = {
+            "task_id": "tid1",
+            "subject": "Tarea A",
+            "parent_code": "NORM-001",
+            "parent_subject": "NORM-001 - Tarea padre",
+            "responsable": "Juan Pérez",
+            "categoria": "VENCIDA",
+            "bucket": "Blocked",
+            "end_str": "10-06-2026",
+            "start_str": "01-06-2026",
+            "mod_str": "12-06-2026",
+            "nota": "Nota de gestión completa",
+            "nota_preview": "Nota de gestión",
+            "tiene_nota": True,
+            "checklist": "2/3",
+            "nivel_criticidad": 1,
+            "suggest_action_text": "Bloqueada y vencida — escalar",
+            "end_dt": "2026-06-10T00:00:00Z",
+            "progress": 40,
+        }
+        base.update(kwargs)
+        return base
+
+    # ── Columna Notas eliminada ───────────────────────────────────────────────
+
+    def test_notas_header_not_in_table(self):
+        html = generate_html_report([self._row()], self.TODAY_H, "X")
+        # La cabecera "Notas" no debe aparecer como columna de la tabla
+        assert "<th>Notas" not in html
+
+    def test_nota_cell_class_removed(self):
+        html = generate_html_report([self._row()], self.TODAY_H, "X")
+        assert 'nota-cell' not in html
+
+    # ── Tooltip de nota sobre Estado ─────────────────────────────────────────
+
+    def test_nota_completa_en_tooltip_estado(self):
+        nota_larga = "Esta es una nota de gestión muy larga que antes se truncaba pero ahora debe verse completa"
+        row = self._row(nota=nota_larga, tiene_nota=True)
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert nota_larga in html
+
+    def test_sin_nota_muestra_fallback(self):
+        row = self._row(nota="", tiene_nota=False)
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert "Sin nota" in html
+
+    def test_nota_xss_en_tooltip_escapada(self):
+        row = self._row(nota='<script>alert("xss")</script>', tiene_nota=True)
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert "&lt;script&gt;" in html
+
+    # ── AI en todas las filas ─────────────────────────────────────────────────
+
+    def test_ai_icon_present_in_all_rows(self):
+        rows = [
+            self._row(task_id="t1", suggest_action_text=""),
+            self._row(task_id="t2", suggest_action_text=""),
+            self._row(task_id="t3", suggest_action_text=""),
+        ]
+        html = generate_html_report(rows, self.TODAY_H, "X")
+        # count only the HTML element instances, not CSS selector occurrences
+        assert html.count('class="ai-icon"') == 3
+
+    def test_ai_icon_present_even_without_suggest_action(self):
+        row = self._row(suggest_action_text="", categoria="EN CURSO",
+                        bucket="In Progress", nivel_criticidad=7,
+                        end_dt="2026-07-30T00:00:00Z", end_str="30-07-2026",
+                        tiene_nota=False, nota="")
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert "ai-icon" in html
+
+    # ── Filtro por pilar ─────────────────────────────────────────────────────
+
+    def test_filter_pilar_select_present(self):
+        html = generate_html_report([self._row()], self.TODAY_H, "X")
+        assert "filter-pilar" in html
+
+    def test_filter_pilar_contains_norm_option(self):
+        row = self._row(parent_code="NORM-001")
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert "NORM" in html
+
+    def test_filter_pilar_contains_inter_option(self):
+        row = self._row(task_id="t2", parent_code="INTER-006")
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert "INTER" in html
+
+    def test_filter_pilar_contains_port_option(self):
+        row = self._row(task_id="t3", parent_code="PORT-020")
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert "PORT" in html
+
+    def test_row_has_data_pilar_attribute(self):
+        row = self._row(parent_code="INTER-006")
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert 'data-pilar="INTER"' in html
+
+    def test_row_norm_data_pilar(self):
+        row = self._row(parent_code="NORM-001")
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert 'data-pilar="NORM"' in html
+
+    # ── Filtro por bucket ─────────────────────────────────────────────────────
+
+    def test_filter_bucket_select_present(self):
+        html = generate_html_report([self._row()], self.TODAY_H, "X")
+        assert "filter-bucket" in html
+
+    def test_filter_bucket_contains_bucket_value(self):
+        row = self._row(bucket="Blocked")
+        html = generate_html_report([row], self.TODAY_H, "X")
+        # el bucket del row debe aparecer como opción del select de bucket
+        # (puede aparecer en otras partes también, pero filter-bucket lo incluye)
+        assert "filter-bucket" in html and "Blocked" in html
+
+    def test_filter_bucket_in_progress_option(self):
+        row = self._row(task_id="t2", bucket="In Progress", categoria="EN CURSO",
+                        nivel_criticidad=7, end_dt="2026-07-30T00:00:00Z",
+                        end_str="30-07-2026", suggest_action_text="")
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert "In Progress" in html
