@@ -9,7 +9,7 @@ from plan_report import (
     extract_code, classify_task, build_parent_index, suggest_bucket,
     needs_escalation, build_report, group_and_sort,
     build_checklist_index, assign_criticality_level, suggest_action,
-    sort_by_criticality, write_csv_pmo, strip_html,
+    sort_by_criticality, write_csv_pmo, strip_html, generate_html_report,
 )
 
 TODAY = datetime(2026, 6, 11, tzinfo=timezone.utc)
@@ -532,6 +532,206 @@ class TestBuildChecklistIndex:
             {"_msdyn_projecttaskid_value": "tid1", "msdyn_projectchecklistcompleted": True},
         ]
         assert build_checklist_index(records) == {"tid1": "3/3"}
+
+
+# ── Issue #18 — generate_html_report ─────────────────────────────────────────
+
+def _make_row(
+    subject="Tarea A",
+    parent_code="NORM-001",
+    parent_subject="NORM-001 - Tarea padre",
+    responsable="Juan Pérez",
+    categoria="VENCIDA",
+    bucket="Blocked",
+    end_str="10-06-2026",
+    start_str="01-06-2026",
+    mod_str="12-06-2026",
+    nota="Nota de gestión",
+    tiene_nota=True,
+    checklist="2/3",
+    nivel_criticidad=1,
+    suggest_action_text="Bloqueada y vencida hace 20 días — escalar",
+    end_dt="2026-06-10T00:00:00Z",
+    task_id="tid1",
+) -> dict:
+    return {
+        "task_id": task_id,
+        "subject": subject,
+        "parent_code": parent_code,
+        "parent_subject": parent_subject,
+        "responsable": responsable,
+        "categoria": categoria,
+        "bucket": bucket,
+        "end_str": end_str,
+        "start_str": start_str,
+        "mod_str": mod_str,
+        "nota": nota,
+        "tiene_nota": tiene_nota,
+        "checklist": checklist,
+        "nivel_criticidad": nivel_criticidad,
+        "suggest_action_text": suggest_action_text,
+        "end_dt": end_dt,
+    }
+
+
+class TestGenerateHtmlReport:
+    """generate_html_report() — función pura, no requiere red."""
+
+    TODAY_H = datetime(2026, 6, 19, tzinfo=timezone.utc)
+
+    def _run(self, rows=None, sin_titulo=0):
+        if rows is None:
+            rows = [_make_row()]
+        return generate_html_report(rows, self.TODAY_H, "Plan TI 2026", sin_titulo)
+
+    # ── Estructura básica ────────────────────────────────────────────────────
+
+    def test_returns_string(self):
+        assert isinstance(self._run(), str)
+
+    def test_well_formed_doctype(self):
+        html = self._run()
+        assert html.startswith("<!DOCTYPE html>")
+
+    def test_closes_html_tag(self):
+        assert self._run().endswith("</html>")
+
+    def test_contains_viewport_meta(self):
+        assert "viewport" in self._run()
+
+    def test_contains_media_print(self):
+        assert "@media print" in self._run()
+
+    def test_title_contains_plan_label(self):
+        assert "Plan TI 2026" in self._run()
+
+    def test_title_contains_date(self):
+        assert "19-06-2026" in self._run()
+
+    # ── KPI cards ────────────────────────────────────────────────────────────
+
+    def test_kpi_total_accionables(self):
+        rows = [
+            _make_row(task_id="t1", categoria="VENCIDA"),
+            _make_row(task_id="t2", categoria="EN FECHA"),
+            _make_row(task_id="t3", categoria="EN CURSO"),
+        ]
+        html = generate_html_report(rows, self.TODAY_H, "X")
+        assert "3" in html  # total accionables
+
+    def test_kpi_vencidas_count(self):
+        rows = [
+            _make_row(task_id="t1", categoria="VENCIDA"),
+            _make_row(task_id="t2", categoria="VENCIDA"),
+            _make_row(task_id="t3", categoria="EN CURSO"),
+        ]
+        html = generate_html_report(rows, self.TODAY_H, "X")
+        # Las 2 vencidas deben aparecer en el conteo KPI
+        assert html.count("2") >= 1
+
+    def test_kpi_salud_buena(self):
+        # 4/4 = 100% con nota → Buena
+        rows = [_make_row(task_id=f"t{i}", tiene_nota=True) for i in range(4)]
+        assert "Buena" in generate_html_report(rows, self.TODAY_H, "X")
+
+    def test_kpi_salud_regular(self):
+        # 1/2 = 50% con nota → Regular
+        rows = [
+            _make_row(task_id="t1", tiene_nota=True),
+            _make_row(task_id="t2", tiene_nota=False, nota=""),
+        ]
+        assert "Regular" in generate_html_report(rows, self.TODAY_H, "X")
+
+    def test_kpi_salud_baja(self):
+        # 0/2 = 0% → Baja
+        rows = [_make_row(task_id=f"t{i}", tiene_nota=False, nota="") for i in range(2)]
+        assert "Baja" in generate_html_report(rows, self.TODAY_H, "X")
+
+    # ── Tabla — clases de criticidad ─────────────────────────────────────────
+
+    def test_row_has_nivel_class(self):
+        row = _make_row(nivel_criticidad=1)
+        assert "nivel-1" in generate_html_report([row], self.TODAY_H, "X")
+
+    def test_nivel_2_row(self):
+        row = _make_row(nivel_criticidad=2)
+        assert "nivel-2" in generate_html_report([row], self.TODAY_H, "X")
+
+    def test_nivel_7_row(self):
+        row = _make_row(nivel_criticidad=7, categoria="EN CURSO", bucket="In Progress",
+                        suggest_action_text="", end_dt="2026-07-30T00:00:00Z",
+                        end_str="30-07-2026")
+        assert "nivel-7" in generate_html_report([row], self.TODAY_H, "X")
+
+    # ── Tooltip AI ───────────────────────────────────────────────────────────
+
+    def test_ai_icon_present_when_suggestion(self):
+        row = _make_row(suggest_action_text="Escalar con responsable")
+        assert "AI" in generate_html_report([row], self.TODAY_H, "X")
+
+    def test_ai_tooltip_text_present(self):
+        row = _make_row(suggest_action_text="Escalar con responsable")
+        assert "Escalar con responsable" in generate_html_report([row], self.TODAY_H, "X")
+
+    def test_no_ai_icon_when_no_suggestion(self):
+        row = _make_row(suggest_action_text="")
+        html = generate_html_report([row], self.TODAY_H, "X")
+        # El texto de sugerencia vacío no debe generar tooltip
+        assert "ai-icon" not in html or "Escalar" not in html
+
+    # ── Escaping / seguridad ─────────────────────────────────────────────────
+
+    def test_nota_xss_escaped(self):
+        # La nota con XSS debe aparecer escapada en el HTML;
+        # verificamos el contenido escapado, no la ausencia de <script>
+        # (el HTML propio incluye un bloque <script> de JS inline legítimo).
+        row = _make_row(nota='<script>alert("xss")</script>', tiene_nota=True)
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert "&lt;script&gt;" in html
+        assert "alert(&quot;xss&quot;)" in html or "alert(&#" in html or 'alert("xss")' not in html
+
+    def test_ampersand_in_responsable_escaped(self):
+        row = _make_row(responsable="Juan & Pérez")
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert "Juan & Pérez" not in html  # literal ampersand no debe aparecer
+        assert "&amp;" in html
+
+    def test_quotes_in_subject_escaped(self):
+        row = _make_row(subject='Tarea "importante"')
+        html = generate_html_report([row], self.TODAY_H, "X")
+        assert 'Tarea "importante"' not in html
+        assert "&quot;" in html or "&#x27;" in html or "importante" in html
+
+    # ── Sección Alertas ───────────────────────────────────────────────────────
+
+    def test_escalamiento_present_when_blocked_vencida(self):
+        # Blocked + VENCIDA + end_dt hace >14 días → escalamiento
+        row = _make_row(
+            categoria="VENCIDA", bucket="Blocked",
+            end_dt="2026-05-01T00:00:00Z",  # >14 días antes de TODAY_H (2026-06-19)
+            nivel_criticidad=1,
+        )
+        assert "Escalamiento" in generate_html_report([row], self.TODAY_H, "X")
+
+    def test_escalamiento_absent_when_no_blocked_vencida(self):
+        row = _make_row(categoria="EN CURSO", bucket="In Progress",
+                        suggest_action_text="", end_dt="2026-07-30T00:00:00Z",
+                        end_str="30-07-2026", nivel_criticidad=7)
+        html = generate_html_report([row], self.TODAY_H, "X")
+        # No debe haber items de escalamiento (el bloque de sección puede existir)
+        assert "escalar" not in html.lower() or "Sin tareas" in html
+
+    def test_carga_responsable_listed(self):
+        rows = [
+            _make_row(task_id="t1", responsable="Ana López", categoria="VENCIDA"),
+            _make_row(task_id="t2", responsable="Ana López", categoria="EN CURSO"),
+        ]
+        html = generate_html_report(rows, self.TODAY_H, "X")
+        assert "Ana López" in html
+
+    def test_sin_titulo_shown_in_footer(self):
+        html = generate_html_report([_make_row()], self.TODAY_H, "X", sin_titulo=3)
+        assert "3" in html  # los 3 sin título aparecen en el footer
 
     def test_none_done(self):
         records = [

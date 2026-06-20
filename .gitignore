@@ -23,6 +23,7 @@ aura-agent-kit/.agent/memory/backups/
 # Outputs locales del plan-reporter
 reporte_ti_2026_*.csv
 reporte_pmo_*.csv
+reporte_pmo_*.html
 
 # Cache Python
 **/__pycache__/

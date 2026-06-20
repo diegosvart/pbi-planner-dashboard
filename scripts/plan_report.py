@@ -3,9 +3,11 @@ Motor parametrizado de extracción Dataverse → reporte de gestión de planes.
 
 Uso:
     python plan_report.py --plan "Planificación área TI 2026"
-    python plan_report.py --project-id <GUID> --window-days 14 --today 2026-06-11 --out report.csv
+    python plan_report.py --project-id <GUID> --today 2026-06-11 --out report.csv
     python plan_report.py --plan "..." --cache-file %TEMP%\\ti.json
     python plan_report.py --from-cache %TEMP%\\ti.json --out report.csv
+    python plan_report.py --from-cache %TEMP%\\ti.json --html reporte_pmo.html
+    python plan_report.py --from-cache %TEMP%\\ti.json --out report.csv --html reporte.html
 
 Requiere: az CLI autenticado con dmorales@grupoebi.cl
           az account get-access-token (tenant b16beb2c-1c93-4497-bc75-5a1cdae6ee6c)
@@ -214,6 +216,643 @@ def write_csv_pmo(rows: list, out) -> None:
             f.close()
     if should_close:
         print(f"\n  CSV PMO exportado: {out}  ({len(csv_rows)} filas)")
+
+
+# ── HTML report generator ─────────────────────────────────────────────────────
+
+def _html_styles() -> str:
+    return """
+<style>
+  :root {
+    --corp-blue:   #1a4f8a;
+    --corp-blue-d: #153d6e;
+    --corp-blue-l: #e8f0fb;
+    --neutral-50:  #f8f9fa;
+    --neutral-100: #f1f3f5;
+    --neutral-200: #e9ecef;
+    --neutral-400: #adb5bd;
+    --neutral-600: #6c757d;
+    --neutral-800: #343a40;
+    --crit-red:    #d32f2f;
+    --crit-red-l:  #ffebee;
+    --crit-orange: #e65100;
+    --crit-orange-l: #fff3e0;
+    --crit-green:  #2e7d32;
+    --crit-green-l: #e8f5e9;
+    --kpi-blue:    #1565c0;
+    --kpi-blue-l:  #e3f2fd;
+    --shadow-sm:   0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+    --shadow-md:   0 3px 6px rgba(0,0,0,.10), 0 2px 4px rgba(0,0,0,.08);
+    --radius:      6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    color: var(--neutral-800);
+    background: var(--neutral-100);
+    padding: 24px 20px 40px;
+    line-height: 1.5;
+  }
+
+  /* ── Header ── */
+  .report-header {
+    background: var(--corp-blue);
+    color: #fff;
+    padding: 20px 24px 16px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-md);
+  }
+  .report-header h1 { font-size: 18px; font-weight: 700; letter-spacing: .3px; }
+  .report-header .subtitle {
+    font-size: 12px;
+    color: rgba(255,255,255,.78);
+    margin-top: 4px;
+  }
+
+  /* ── KPI cards ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .kpi-card {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow-sm);
+    border-top: 3px solid var(--neutral-400);
+  }
+  .kpi-card.red   { border-top-color: var(--crit-red); }
+  .kpi-card.green { border-top-color: var(--crit-green); }
+  .kpi-card.blue  { border-top-color: var(--kpi-blue); }
+  .kpi-card .kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .kpi-card.red   .kpi-value { color: var(--crit-red); }
+  .kpi-card.green .kpi-value { color: var(--crit-green); }
+  .kpi-card.blue  .kpi-value { color: var(--kpi-blue); }
+  .kpi-card .kpi-label { font-size: 11px; color: var(--neutral-600); text-transform: uppercase; letter-spacing: .5px; }
+
+  /* ── Salud gestión ── */
+  .salud-bar {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+  }
+  .salud-bar .salud-label { color: var(--neutral-600); font-weight: 600; }
+  .salud-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .salud-badge.buena   { background: var(--crit-green-l); color: var(--crit-green); }
+  .salud-badge.regular { background: var(--crit-orange-l); color: var(--crit-orange); }
+  .salud-badge.baja    { background: var(--crit-red-l); color: var(--crit-red); }
+
+  /* ── Controls (filter/search bar) ── */
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .controls label { font-size: 11px; color: var(--neutral-600); font-weight: 600; }
+  .controls select, .controls input {
+    padding: 5px 10px;
+    border: 1px solid var(--neutral-200);
+    border-radius: 4px;
+    font-size: 12px;
+    background: #fff;
+    color: var(--neutral-800);
+    min-width: 140px;
+  }
+  .controls select:focus, .controls input:focus {
+    outline: 2px solid var(--corp-blue);
+    outline-offset: 1px;
+  }
+  .controls .clear-btn {
+    padding: 5px 12px;
+    background: var(--neutral-200);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--neutral-800);
+  }
+  .controls .clear-btn:hover { background: var(--neutral-400); }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 12px;
+  }
+  thead th {
+    background: var(--corp-blue);
+    color: #fff;
+    padding: 9px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .3px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  thead th:hover { background: var(--corp-blue-d); }
+  thead th .sort-arrow { margin-left: 4px; opacity: .6; font-size: 9px; }
+  tbody tr { border-bottom: 1px solid var(--neutral-200); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--corp-blue-l); }
+  tbody tr.hidden-row { display: none; }
+  tbody td { padding: 7px 10px; vertical-align: top; }
+
+  /* ── Criticality level row colors ── */
+  .nivel-1 td:first-child, .nivel-2 td:first-child, .nivel-3 td:first-child { border-left: 4px solid var(--crit-red); }
+  .nivel-4 td:first-child { border-left: 4px solid var(--crit-orange); }
+  .nivel-5 td:first-child, .nivel-6 td:first-child, .nivel-7 td:first-child { border-left: 4px solid var(--crit-green); }
+
+  /* ── Estado badges ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .badge-vencida  { background: var(--crit-red-l);    color: var(--crit-red); }
+  .badge-enfecha  { background: var(--crit-orange-l); color: var(--crit-orange); }
+  .badge-encurso  { background: var(--crit-green-l);  color: var(--crit-green); }
+
+  /* ── AI tooltip ── */
+  .ai-icon {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+    background: var(--corp-blue);
+    color: #fff;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    margin-left: 4px;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .ai-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    background: var(--neutral-800);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 400;
+    border-radius: 4px;
+    padding: 6px 10px;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 280px;
+    white-space: normal;
+    z-index: 10;
+    box-shadow: var(--shadow-md);
+    transition: opacity .15s;
+    pointer-events: none;
+  }
+  .ai-icon:hover .ai-tooltip { visibility: visible; opacity: 1; }
+
+  /* ── Nota cell ── */
+  .nota-cell { max-width: 220px; font-size: 11px; color: var(--neutral-600); }
+
+  /* ── Alertas ── */
+  .section {
+    margin-top: 24px;
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .section-header {
+    background: var(--corp-blue-l);
+    padding: 10px 16px;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--corp-blue);
+    border-bottom: 1px solid var(--neutral-200);
+    letter-spacing: .3px;
+  }
+  .section-body { padding: 12px 16px; }
+  .alert-item {
+    padding: 8px 12px;
+    border-left: 3px solid var(--crit-red);
+    margin-bottom: 8px;
+    background: var(--crit-red-l);
+    border-radius: 0 4px 4px 0;
+    font-size: 12px;
+  }
+  .alert-item:last-child { margin-bottom: 0; }
+  .alert-item .alert-title { font-weight: 600; }
+  .alert-item .alert-meta { color: var(--neutral-600); font-size: 11px; margin-top: 2px; }
+  .suggestion-item {
+    padding: 6px 12px;
+    margin-bottom: 6px;
+    border-left: 3px solid var(--crit-orange);
+    background: var(--crit-orange-l);
+    border-radius: 0 4px 4px 0;
+    font-size: 12px;
+  }
+  .suggestion-item:last-child { margin-bottom: 0; }
+  .no-alert { color: var(--neutral-600); font-size: 12px; font-style: italic; }
+
+  /* ── Responsable table ── */
+  .resp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .resp-table th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--neutral-600);
+    font-size: 11px;
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--neutral-200);
+  }
+  .resp-table td { padding: 5px 8px; border-bottom: 1px solid var(--neutral-100); }
+  .resp-table tr:last-child td { border-bottom: none; }
+  .resp-alert { color: var(--crit-red); font-weight: 600; font-size: 11px; }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 24px;
+    color: var(--neutral-600);
+    font-size: 11px;
+    text-align: center;
+  }
+  .footer .quality-warn { color: var(--crit-orange); margin-top: 4px; }
+
+  /* ── Print ── */
+  @media print {
+    body { background: #fff; padding: 0; font-size: 11px; }
+    .controls, .clear-btn { display: none !important; }
+    .report-header { box-shadow: none; border-radius: 0; }
+    .table-wrap { overflow: visible; box-shadow: none; }
+    table { font-size: 10px; }
+    thead th { background: var(--corp-blue) !important; color: #fff !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .nivel-1 td:first-child, .nivel-2 td:first-child, .nivel-3 td:first-child { border-left: 4px solid var(--crit-red) !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .nivel-4 td:first-child { border-left: 4px solid var(--crit-orange) !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .nivel-5 td:first-child, .nivel-6 td:first-child, .nivel-7 td:first-child { border-left: 4px solid var(--crit-green) !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .badge { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .ai-tooltip { display: none; }
+    .section { box-shadow: none; page-break-inside: avoid; }
+    .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+    .kpi-card { box-shadow: none; border: 1px solid var(--neutral-200); }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
+</style>"""
+
+
+def _html_script() -> str:
+    return """
+<script>
+(function () {
+  'use strict';
+
+  var table = document.getElementById('main-table');
+  if (!table) return;
+
+  var tbody = table.querySelector('tbody');
+  var rows  = Array.from(tbody.querySelectorAll('tr'));
+
+  /* ── Filter dropdowns ── */
+  var selEstado = document.getElementById('filter-estado');
+  var selResp   = document.getElementById('filter-resp');
+  var inpText   = document.getElementById('filter-text');
+
+  function applyFilters() {
+    var estado = selEstado ? selEstado.value : '';
+    var resp   = selResp   ? selResp.value   : '';
+    var text   = inpText   ? inpText.value.toLowerCase() : '';
+    rows.forEach(function (tr) {
+      var cells = tr.querySelectorAll('td');
+      var rowEstado = cells[4] ? cells[4].textContent.trim() : '';
+      var rowResp   = cells[3] ? cells[3].textContent.trim() : '';
+      var rowText   = tr.textContent.toLowerCase();
+      var show = true;
+      if (estado && rowEstado.indexOf(estado) === -1) show = false;
+      if (resp   && rowResp   !== resp)               show = false;
+      if (text   && rowText.indexOf(text) === -1)     show = false;
+      tr.classList.toggle('hidden-row', !show);
+    });
+  }
+
+  if (selEstado) selEstado.addEventListener('change', applyFilters);
+  if (selResp)   selResp.addEventListener('change', applyFilters);
+  if (inpText)   inpText.addEventListener('input',  applyFilters);
+
+  var clearBtn = document.getElementById('clear-filters');
+  if (clearBtn) clearBtn.addEventListener('click', function () {
+    if (selEstado) selEstado.value = '';
+    if (selResp)   selResp.value   = '';
+    if (inpText)   inpText.value   = '';
+    applyFilters();
+  });
+
+  /* ── Column sort ── */
+  var sortState = { col: -1, asc: true };
+  var headers   = table.querySelectorAll('thead th');
+
+  headers.forEach(function (th, idx) {
+    th.addEventListener('click', function () {
+      var arrow = th.querySelector('.sort-arrow');
+      headers.forEach(function (h) {
+        var a = h.querySelector('.sort-arrow');
+        if (a) a.textContent = '↕';
+      });
+      if (sortState.col === idx) {
+        sortState.asc = !sortState.asc;
+      } else {
+        sortState.col = idx;
+        sortState.asc = true;
+      }
+      if (arrow) arrow.textContent = sortState.asc ? '↑' : '↓';
+
+      var sorted = rows.slice().sort(function (a, b) {
+        var ca = a.querySelectorAll('td')[idx];
+        var cb = b.querySelectorAll('td')[idx];
+        var ta = ca ? ca.textContent.trim() : '';
+        var tb = cb ? cb.textContent.trim() : '';
+        /* Numeric sort for NivelCriticidad column (index 4 is Estado, 5 is Bucket) */
+        var na = parseFloat(ta), nb = parseFloat(tb);
+        var cmp = (!isNaN(na) && !isNaN(nb)) ? (na - nb) : ta.localeCompare(tb, 'es');
+        return sortState.asc ? cmp : -cmp;
+      });
+      sorted.forEach(function (tr) { tbody.appendChild(tr); });
+    });
+  });
+})();
+</script>"""
+
+
+def _html_kpis(rows: list, today: datetime) -> str:
+    total = len(rows)
+    vencidas = sum(1 for r in rows if r.get("categoria") == "VENCIDA")
+    en_curso  = sum(1 for r in rows if r.get("categoria") == "EN CURSO")
+    con_nota  = sum(1 for r in rows if r.get("tiene_nota"))
+    pct_nota  = (con_nota / total * 100) if total else 0
+    if pct_nota >= 80:
+        salud, salud_cls = "Buena", "buena"
+    elif pct_nota >= 50:
+        salud, salud_cls = "Regular", "regular"
+    else:
+        salud, salud_cls = "Baja", "baja"
+
+    return f"""
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-value">{total}</div>
+    <div class="kpi-label">Total accionables</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="kpi-value">{vencidas}</div>
+    <div class="kpi-label">Vencidas</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="kpi-value">{en_curso}</div>
+    <div class="kpi-label">En curso</div>
+  </div>
+  <div class="kpi-card blue">
+    <div class="kpi-value">{con_nota}</div>
+    <div class="kpi-label">Con nota de gestión</div>
+  </div>
+</div>
+<div class="salud-bar">
+  <span class="salud-label">Salud Gestión:</span>
+  <span class="salud-badge {salud_cls}">{salud}</span>
+  <span style="color:var(--neutral-600)">({con_nota}/{total} tareas con nota — {pct_nota:.0f}%)</span>
+</div>"""
+
+
+def _html_controls(rows: list) -> str:
+    estados = sorted({r.get("categoria", "") for r in rows if r.get("categoria")})
+    resps   = sorted({r.get("responsable", "") for r in rows if r.get("responsable")})
+    opts_estado = "".join(f'<option value="{_html.escape(e)}">{_html.escape(e)}</option>' for e in estados)
+    opts_resp   = "".join(f'<option value="{_html.escape(r)}">{_html.escape(r)}</option>' for r in resps)
+    return f"""
+<div class="controls">
+  <label for="filter-estado">Estado:</label>
+  <select id="filter-estado"><option value="">Todos</option>{opts_estado}</select>
+  <label for="filter-resp">Responsable:</label>
+  <select id="filter-resp"><option value="">Todos</option>{opts_resp}</select>
+  <label for="filter-text">Buscar:</label>
+  <input id="filter-text" type="text" placeholder="texto libre…" />
+  <button class="clear-btn" id="clear-filters">Limpiar</button>
+</div>"""
+
+
+def _badge(categoria: str) -> str:
+    mapping = {
+        "VENCIDA":  ("badge badge-vencida", "VENCIDA"),
+        "EN FECHA": ("badge badge-enfecha", "EN FECHA"),
+        "EN CURSO": ("badge badge-encurso", "EN CURSO"),
+    }
+    cls, label = mapping.get(categoria, ("badge", categoria))
+    return f'<span class="{cls}">{_html.escape(label)}</span>'
+
+
+def _html_table(rows: list) -> str:
+    headers = ["Código", "Tarea padre", "Tarea", "Responsable", "Estado",
+               "Bucket", "Notas", "Checklist", "F.inicio", "F.fin", "Últ. act."]
+    ths = "".join(f'<th>{h}<span class="sort-arrow">↕</span></th>' for h in headers)
+
+    trs = []
+    for r in rows:
+        nivel = r.get("nivel_criticidad", 7)
+        ai_html = ""
+        suggestion = r.get("suggest_action_text", "")
+        if suggestion:
+            ai_html = (
+                f'<span class="ai-icon">AI'
+                f'<span class="ai-tooltip">{_html.escape(suggestion)}</span>'
+                f'</span>'
+            )
+        trs.append(
+            f'<tr class="nivel-{nivel}">'
+            f'<td>{_html.escape(r.get("parent_code", ""))}</td>'
+            f'<td>{_html.escape(r.get("parent_subject", ""))}</td>'
+            f'<td>{_html.escape(r.get("subject", ""))}{ai_html}</td>'
+            f'<td>{_html.escape(r.get("responsable", ""))}</td>'
+            f'<td>{_badge(r.get("categoria", ""))}</td>'
+            f'<td>{_html.escape(r.get("bucket", ""))}</td>'
+            f'<td class="nota-cell">{_html.escape(r.get("nota", ""))}</td>'
+            f'<td>{_html.escape(r.get("checklist", ""))}</td>'
+            f'<td>{_html.escape(r.get("start_str", ""))}</td>'
+            f'<td>{_html.escape(r.get("end_str", ""))}</td>'
+            f'<td>{_html.escape(r.get("mod_str", ""))}</td>'
+            f'</tr>'
+        )
+
+    return f"""
+<div class="table-wrap">
+<table id="main-table">
+  <thead><tr>{ths}</tr></thead>
+  <tbody>{''.join(trs)}</tbody>
+</table>
+</div>"""
+
+
+def _html_alerts(rows: list, today: datetime) -> str:
+    # Escalamiento crítico
+    esc_items = []
+    for r in rows:
+        e = needs_escalation(r, today)
+        if e:
+            end_dt = datetime.fromisoformat(r["end_dt"].replace("Z", "+00:00"))
+            dias = (today - end_dt).days
+            esc_items.append(
+                f'<div class="alert-item">'
+                f'<div class="alert-title">{_html.escape(r.get("subject", ""))}</div>'
+                f'<div class="alert-meta">'
+                f'Responsable: {_html.escape(r.get("responsable", ""))} &nbsp;|&nbsp; '
+                f'Vencida hace {dias} días &nbsp;|&nbsp; {_html.escape(e["reason"])}'
+                f'</div></div>'
+            )
+    esc_html = "".join(esc_items) if esc_items else '<p class="no-alert">Sin tareas bloqueadas-vencidas críticas.</p>'
+
+    # Sugerencias de bucket
+    sug_items = []
+    for r in rows:
+        s = suggest_bucket(r)
+        if s:
+            sug_items.append(
+                f'<div class="suggestion-item">'
+                f'<strong>{_html.escape(r.get("subject", ""))}</strong><br>'
+                f'{_html.escape(r.get("bucket", ""))} → {_html.escape(s["target_bucket"])} &nbsp;|&nbsp; '
+                f'{_html.escape(s["reason"])}'
+                f'</div>'
+            )
+    sug_html = "".join(sug_items) if sug_items else '<p class="no-alert">Sin sugerencias — estado coherente.</p>'
+
+    # Carga por responsable
+    resp_count: dict[str, int] = {}
+    resp_venc:  dict[str, int] = {}
+    for r in rows:
+        resp = r.get("responsable", "(sin responsable)")
+        resp_count[resp] = resp_count.get(resp, 0) + 1
+        if r.get("categoria") == "VENCIDA":
+            resp_venc[resp] = resp_venc.get(resp, 0) + 1
+
+    resp_rows = []
+    for resp, cnt in sorted(resp_count.items(), key=lambda x: -x[1]):
+        v = resp_venc.get(resp, 0)
+        venc_cell = f'<td class="resp-alert">⚠ {v}</td>' if v else '<td>—</td>'
+        resp_rows.append(
+            f'<tr><td>{_html.escape(resp)}</td><td>{cnt}</td>{venc_cell}</tr>'
+        )
+
+    return f"""
+<div class="section">
+  <div class="section-header">⚠ Escalamiento crítico — bloqueadas vencidas &gt;14 días</div>
+  <div class="section-body">{esc_html}</div>
+</div>
+<div class="section">
+  <div class="section-header">🔄 Cambios de bucket sugeridos</div>
+  <div class="section-body">{sug_html}</div>
+</div>
+<div class="section">
+  <div class="section-header">👤 Carga por responsable</div>
+  <div class="section-body">
+    <table class="resp-table">
+      <thead><tr><th>Responsable</th><th>Tareas accionables</th><th>Vencidas</th></tr></thead>
+      <tbody>{''.join(resp_rows)}</tbody>
+    </table>
+  </div>
+</div>"""
+
+
+def generate_html_report(rows_sorted: list, today: datetime,
+                         plan_label: str, sin_titulo: int = 0) -> str:
+    """
+    Genera HTML autocontenido (CSS + JS inline) del reporte PMO.
+
+    rows_sorted ya debe estar enriquecido con nivel_criticidad, suggest_action_text
+    y checklist (ver main() líneas de enriquecimiento).
+
+    Secciones:
+      1. KPI cards + Salud Gestión
+      2. Controles de filtro/orden (JS vanilla)
+      3. Tabla priorizada por criticidad
+      4. Alertas: escalamiento, sugerencias de bucket, carga por responsable
+      5. Footer con calidad de datos
+    """
+    date_str = today.strftime("%d-%m-%Y")
+
+    # Footer de calidad de datos
+    quality_parts = []
+    if sin_titulo:
+        quality_parts.append(
+            f'<div class="quality-warn">⚠ {sin_titulo} tarea(s) sin título excluidas del reporte (datos incompletos en Planner).</div>'
+        )
+    vencidas_sin_nota = sum(1 for r in rows_sorted if r.get("categoria") == "VENCIDA" and not r.get("tiene_nota"))
+    if vencidas_sin_nota:
+        quality_parts.append(
+            f'<div class="quality-warn">⚠ {vencidas_sin_nota} tarea(s) vencida(s) SIN nota de gestión — riesgo alto.</div>'
+        )
+    if not quality_parts:
+        quality_parts.append('<div>✓ Sin problemas de calidad detectados.</div>')
+    quality_html = "".join(quality_parts)
+
+    return (
+        f'<!DOCTYPE html>\n'
+        f'<html lang="es">\n'
+        f'<head>\n'
+        f'<meta charset="UTF-8">\n'
+        f'<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+        f'<title>Reporte PMO — {_html.escape(plan_label)} — {date_str}</title>\n'
+        f'{_html_styles()}\n'
+        f'</head>\n'
+        f'<body>\n'
+        f'<div class="report-header">\n'
+        f'  <h1>Reporte de Gestión PMO — {_html.escape(plan_label)}</h1>\n'
+        f'  <div class="subtitle">Fecha de referencia: {date_str} &nbsp;|&nbsp; '
+        f'Tareas accionables (vencidas, en fecha, en curso) — bucket ≠ Done</div>\n'
+        f'</div>\n'
+        f'{_html_kpis(rows_sorted, today)}\n'
+        f'{_html_controls(rows_sorted)}\n'
+        f'{_html_table(rows_sorted)}\n'
+        f'{_html_alerts(rows_sorted, today)}\n'
+        f'<div class="footer">\n'
+        f'  Generado el {date_str} &nbsp;|&nbsp; Plan Lineamiento Estratégico 2026\n'
+        f'  {quality_html}\n'
+        f'</div>\n'
+        f'{_html_script()}\n'
+        f'</body>\n'
+        f'</html>'
+    )
 
 
 def needs_escalation(entry: dict, today: datetime, dias_umbral: int = 14) -> dict | None:
@@ -580,6 +1219,7 @@ def main():
                         help="Guardar datos crudos en caché JSON tras la extracción")
     parser.add_argument("--today", help="Fecha de referencia YYYY-MM-DD (default: hoy)")
     parser.add_argument("--out", help="Ruta CSV de salida (opcional)")
+    parser.add_argument("--html", metavar="FILE", help="Ruta HTML de salida (opcional)")
     args = parser.parse_args()
 
     if not args.from_cache and not args.plan and not args.project_id:
@@ -673,9 +1313,17 @@ def main():
 
     if args.out:
         write_csv_pmo(rows_sorted, args.out)
-    elif args.cache_file:
-        print("\n  Para exportar a CSV sin re-consultar Dataverse:")
+
+    if args.html:
+        html_content = generate_html_report(rows_sorted, today_dt, plan_label, sin_titulo)
+        with open(args.html, "w", encoding="utf-8") as f:
+            f.write(html_content)
+        print(f"\n  HTML PMO exportado: {args.html}  ({len(rows_sorted)} filas)")
+
+    if not args.out and not args.html and args.cache_file:
+        print("\n  Para exportar sin re-consultar Dataverse:")
         print(f"  python scripts/plan_report.py --from-cache {args.cache_file} --out <ruta.csv>")
+        print(f"  python scripts/plan_report.py --from-cache {args.cache_file} --html <ruta.html>")
 
 
 if __name__ == "__main__":
