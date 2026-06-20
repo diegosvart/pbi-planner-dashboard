@@ -1086,7 +1086,8 @@ def resolve_buckets(token: str, project_id: str) -> tuple[dict, str | None]:
 def fetch_tasks(token: str, project_id: str) -> list:
     fields = ",".join([
         "msdyn_projecttaskid", "msdyn_subject", "msdyn_progress",
-        "msdyn_scheduledstart", "msdyn_scheduledend", "modifiedon", "msdyn_description",
+        "msdyn_scheduledstart", "msdyn_scheduledend", "modifiedon",
+        "msdyn_descriptionplaintext", "msdyn_description",
         "_msdyn_parenttask_value", "_msdyn_projectbucket_value", "statecode",
         "msdyn_summary", "msdyn_outlinelevel",
     ])
@@ -1172,7 +1173,9 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
         mod_str = (datetime.fromisoformat(mod_raw.replace("Z", "+00:00")).strftime("%d-%m-%Y")
                    if mod_raw else "?")
 
-        nota_raw = strip_html(t.get("msdyn_description") or "")
+        nota_raw = strip_html(
+            t.get("msdyn_descriptionplaintext") or t.get("msdyn_description") or ""
+        )
         tiene_nota = bool(nota_raw)
         nota_preview = (nota_raw[:80] + "...") if len(nota_raw) > 80 else nota_raw
 

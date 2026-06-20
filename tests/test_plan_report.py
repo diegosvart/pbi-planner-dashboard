@@ -788,13 +788,30 @@ class TestAssignCriticalityLevel:
 # ── Issue #22 — build_report usa msdyn_description ───────────────────────────
 
 class TestBuildReportUsesDescription:
-    """build_report debe leer msdyn_description, no msdyn_descriptionplaintext."""
+    """build_report lee descriptionplaintext (producción) con fallback a description."""
 
     def _run(self, tasks):
         parent_index = {"p1": "NORM-001 - Padre"}
         return build_report(tasks, {}, None, parent_index, TODAY)
 
+    def test_descriptionplaintext_read(self):
+        # Campo real en producción: msdyn_descriptionplaintext
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea", "p1", VENCIDA_END)
+        task["msdyn_descriptionplaintext"] = "Nota plana de producción"
+        rows, _ = self._run([task])
+        assert rows[0]["nota"] == "Nota plana de producción"
+        assert rows[0]["tiene_nota"] is True
+
+    def test_descriptionplaintext_preferred_over_description(self):
+        # Cuando ambos campos están presentes, gana descriptionplaintext
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea", "p1", VENCIDA_END)
+        task["msdyn_descriptionplaintext"] = "Nota plana preferida"
+        task["msdyn_description"] = "Nota rich-text secundaria"
+        rows, _ = self._run([task])
+        assert rows[0]["nota"] == "Nota plana preferida"
+
     def test_description_field_read(self):
+        # Fallback: si solo existe msdyn_description, se usa igual
         task = _make_raw_task("t1", "NORM-001.1 - Tarea", "p1", VENCIDA_END)
         task["msdyn_description"] = "Nota via msdyn_description"
         rows, _ = self._run([task])
