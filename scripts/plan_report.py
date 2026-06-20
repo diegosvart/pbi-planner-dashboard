@@ -165,6 +165,75 @@ def suggest_action(entry: dict, today: datetime, dias_umbral: int = 14) -> str:
     return ""
 
 
+def pillar_of(parent_code: str | None) -> str:
+    """Returns the pilar prefix (NORM/INTER/PORT) from a parent_code like 'NORM-001'."""
+    if not parent_code:
+        return "SIN_CODIGO"
+    parts = parent_code.split("-", 1)
+    if len(parts) < 2:
+        return "SIN_CODIGO"
+    return parts[0]
+
+
+def analyze_task(entry: dict, today: datetime) -> str:
+    """Always-non-empty deterministic analytical comment per task."""
+    categoria = entry.get("categoria", "")
+    tiene_nota = entry.get("tiene_nota", False)
+    bucket = entry.get("bucket", "")
+    progress = entry.get("progress", 0) or 0
+    end_raw = entry.get("end_dt", "")
+
+    # Use precomputed suggest_action_text when available; fall back to live computation.
+    # This avoids double-computation and respects values set at report-build time.
+    action = entry.get("suggest_action_text") or suggest_action(entry, today)
+    parts = [action] if action else []
+
+    days_info = ""
+    if end_raw:
+        end_dt = datetime.fromisoformat(end_raw.replace("Z", "+00:00"))
+        if categoria == "VENCIDA":
+            dias = (today - end_dt).days
+            days_info = f"Vencida hace {dias} día{'s' if dias != 1 else ''}."
+        else:
+            dias = (end_dt.date() - today.date()).days
+            days_info = f"Vence en {dias} día{'s' if dias != 1 else ''}."
+
+    if categoria == "VENCIDA":
+        if not tiene_nota:
+            parts.append(
+                f"{days_info} Sin nota de gestión — requiere acción urgente del responsable."
+            )
+        else:
+            parts.append(
+                f"{days_info} Tiene nota de gestión. Verificar si el bloqueo fue resuelto."
+            )
+    elif categoria == "EN FECHA":
+        if not tiene_nota:
+            parts.append(
+                f"{days_info} En fecha pero sin nota de seguimiento — confirmar avance con el responsable."
+            )
+        else:
+            parts.append(
+                f"{days_info} En fecha con nota de gestión. Mantener seguimiento."
+            )
+    else:  # EN CURSO
+        avance = f"{int(progress)}% de avance." if progress else "Sin avance registrado."
+        if bucket == "Blocked":
+            parts.append(
+                f"{days_info} Tarea bloqueada con {avance} Gestionar desbloqueo."
+            )
+        elif not tiene_nota:
+            parts.append(
+                f"{days_info} En curso. {avance} Sin nota de gestión — verificar estado con responsable."
+            )
+        else:
+            parts.append(
+                f"{days_info} En curso. {avance} Con nota de seguimiento — monitorear cierre."
+            )
+
+    return " ".join(parts).strip()
+
+
 def sort_by_criticality(rows: list, today: datetime) -> list:
     """Sorts flat list by (criticality_level, days_to_end asc)."""
     def sort_key(entry):
@@ -446,8 +515,45 @@ def _html_styles() -> str:
   }
   .ai-icon:hover .ai-tooltip { visibility: visible; opacity: 1; }
 
-  /* ── Nota cell ── */
-  .nota-cell { max-width: 220px; font-size: 11px; color: var(--neutral-600); }
+  /* ── Estado + nota tooltip ── */
+  .estado-wrap {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+  }
+  .nota-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--corp-blue);
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+  .nota-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    background: var(--neutral-800);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 400;
+    border-radius: 4px;
+    padding: 8px 12px;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 320px;
+    white-space: normal;
+    z-index: 20;
+    box-shadow: var(--shadow-md);
+    transition: opacity .15s;
+    pointer-events: none;
+    line-height: 1.5;
+  }
+  .estado-wrap:hover .nota-tooltip { visibility: visible; opacity: 1; }
+  .nota-tooltip.sin-nota { font-style: italic; color: var(--neutral-400); }
 
   /* ── Alertas ── */
   .section {
@@ -549,36 +655,48 @@ def _html_script() -> str:
   var rows  = Array.from(tbody.querySelectorAll('tr'));
 
   /* ── Filter dropdowns ── */
-  var selEstado = document.getElementById('filter-estado');
-  var selResp   = document.getElementById('filter-resp');
-  var inpText   = document.getElementById('filter-text');
+  var selEstado  = document.getElementById('filter-estado');
+  var selPilar   = document.getElementById('filter-pilar');
+  var selBucket  = document.getElementById('filter-bucket');
+  var selResp    = document.getElementById('filter-resp');
+  var inpText    = document.getElementById('filter-text');
 
   function applyFilters() {
-    var estado = selEstado ? selEstado.value : '';
-    var resp   = selResp   ? selResp.value   : '';
-    var text   = inpText   ? inpText.value.toLowerCase() : '';
+    var estado  = selEstado  ? selEstado.value  : '';
+    var pilar   = selPilar   ? selPilar.value   : '';
+    var bucket  = selBucket  ? selBucket.value  : '';
+    var resp    = selResp    ? selResp.value    : '';
+    var text    = inpText    ? inpText.value.toLowerCase() : '';
     rows.forEach(function (tr) {
-      var cells = tr.querySelectorAll('td');
+      var cells     = tr.querySelectorAll('td');
       var rowEstado = cells[4] ? cells[4].textContent.trim() : '';
+      var rowBucket = cells[5] ? cells[5].textContent.trim() : '';
       var rowResp   = cells[3] ? cells[3].textContent.trim() : '';
+      var rowPilar  = tr.dataset.pilar || '';
       var rowText   = tr.textContent.toLowerCase();
       var show = true;
-      if (estado && rowEstado.indexOf(estado) === -1) show = false;
-      if (resp   && rowResp   !== resp)               show = false;
-      if (text   && rowText.indexOf(text) === -1)     show = false;
+      if (estado  && rowEstado.indexOf(estado)   === -1) show = false;
+      if (pilar   && rowPilar  !== pilar)                show = false;
+      if (bucket  && rowBucket !== bucket)               show = false;
+      if (resp    && rowResp   !== resp)                 show = false;
+      if (text    && rowText.indexOf(text)        === -1) show = false;
       tr.classList.toggle('hidden-row', !show);
     });
   }
 
-  if (selEstado) selEstado.addEventListener('change', applyFilters);
-  if (selResp)   selResp.addEventListener('change', applyFilters);
-  if (inpText)   inpText.addEventListener('input',  applyFilters);
+  if (selEstado)  selEstado.addEventListener('change',  applyFilters);
+  if (selPilar)   selPilar.addEventListener('change',   applyFilters);
+  if (selBucket)  selBucket.addEventListener('change',  applyFilters);
+  if (selResp)    selResp.addEventListener('change',    applyFilters);
+  if (inpText)    inpText.addEventListener('input',     applyFilters);
 
   var clearBtn = document.getElementById('clear-filters');
   if (clearBtn) clearBtn.addEventListener('click', function () {
-    if (selEstado) selEstado.value = '';
-    if (selResp)   selResp.value   = '';
-    if (inpText)   inpText.value   = '';
+    if (selEstado)  selEstado.value  = '';
+    if (selPilar)   selPilar.value   = '';
+    if (selBucket)  selBucket.value  = '';
+    if (selResp)    selResp.value    = '';
+    if (inpText)    inpText.value    = '';
     applyFilters();
   });
 
@@ -606,7 +724,7 @@ def _html_script() -> str:
         var cb = b.querySelectorAll('td')[idx];
         var ta = ca ? ca.textContent.trim() : '';
         var tb = cb ? cb.textContent.trim() : '';
-        /* Numeric sort for NivelCriticidad column (index 4 is Estado, 5 is Bucket) */
+        /* Numeric sort for columns with pure numbers (criticality, etc.) */
         var na = parseFloat(ta), nb = parseFloat(tb);
         var cmp = (!isNaN(na) && !isNaN(nb)) ? (na - nb) : ta.localeCompare(tb, 'es');
         return sortState.asc ? cmp : -cmp;
@@ -658,14 +776,22 @@ def _html_kpis(rows: list, today: datetime) -> str:
 
 
 def _html_controls(rows: list) -> str:
-    estados = sorted({r.get("categoria", "") for r in rows if r.get("categoria")})
-    resps   = sorted({r.get("responsable", "") for r in rows if r.get("responsable")})
-    opts_estado = "".join(f'<option value="{_html.escape(e)}">{_html.escape(e)}</option>' for e in estados)
-    opts_resp   = "".join(f'<option value="{_html.escape(r)}">{_html.escape(r)}</option>' for r in resps)
+    estados  = sorted({r.get("categoria", "") for r in rows if r.get("categoria")})
+    resps    = sorted({r.get("responsable", "") for r in rows if r.get("responsable")})
+    pilares  = sorted({pillar_of(r.get("parent_code", "")) for r in rows})
+    buckets  = sorted({r.get("bucket", "") for r in rows if r.get("bucket")})
+    opts_estado  = "".join(f'<option value="{_html.escape(e)}">{_html.escape(e)}</option>' for e in estados)
+    opts_resp    = "".join(f'<option value="{_html.escape(r)}">{_html.escape(r)}</option>' for r in resps)
+    opts_pilar   = "".join(f'<option value="{_html.escape(p)}">{_html.escape(p)}</option>' for p in pilares)
+    opts_bucket  = "".join(f'<option value="{_html.escape(b)}">{_html.escape(b)}</option>' for b in buckets)
     return f"""
 <div class="controls">
   <label for="filter-estado">Estado:</label>
   <select id="filter-estado"><option value="">Todos</option>{opts_estado}</select>
+  <label for="filter-pilar">Pilar:</label>
+  <select id="filter-pilar"><option value="">Todos</option>{opts_pilar}</select>
+  <label for="filter-bucket">Bucket:</label>
+  <select id="filter-bucket"><option value="">Todos</option>{opts_bucket}</select>
   <label for="filter-resp">Responsable:</label>
   <select id="filter-resp"><option value="">Todos</option>{opts_resp}</select>
   <label for="filter-text">Buscar:</label>
@@ -684,31 +810,44 @@ def _badge(categoria: str) -> str:
     return f'<span class="{cls}">{_html.escape(label)}</span>'
 
 
-def _html_table(rows: list) -> str:
+def _html_table(rows: list, today: datetime) -> str:
     headers = ["Código", "Tarea padre", "Tarea", "Responsable", "Estado",
-               "Bucket", "Notas", "Checklist", "F.inicio", "F.fin", "Últ. act."]
+               "Bucket", "Checklist", "F.inicio", "F.fin", "Últ. act."]
     ths = "".join(f'<th>{h}<span class="sort-arrow">↕</span></th>' for h in headers)
 
     trs = []
     for r in rows:
-        nivel = r.get("nivel_criticidad", 7)
-        ai_html = ""
-        suggestion = r.get("suggest_action_text", "")
-        if suggestion:
-            ai_html = (
-                f'<span class="ai-icon">AI'
-                f'<span class="ai-tooltip">{_html.escape(suggestion)}</span>'
-                f'</span>'
-            )
+        nivel   = r.get("nivel_criticidad", 7)
+        pilar   = pillar_of(r.get("parent_code", ""))
+        nota    = r.get("nota", "")
+        nota_escaped = _html.escape(nota) if nota else ""
+        if nota:
+            nota_tooltip_cls = "nota-tooltip"
+            dot_html = '<span class="nota-dot"></span>'
+        else:
+            nota_tooltip_cls = "nota-tooltip sin-nota"
+            dot_html = ""
+        nota_fallback = nota_escaped if nota else "Sin nota de gestión"
+        estado_cell = (
+            f'<span class="estado-wrap">'
+            f'{_badge(r.get("categoria", ""))}{dot_html}'
+            f'<span class="{nota_tooltip_cls}">{nota_fallback}</span>'
+            f'</span>'
+        )
+        analysis = analyze_task(r, today)
+        ai_html = (
+            f'<span class="ai-icon">AI'
+            f'<span class="ai-tooltip">{_html.escape(analysis)}</span>'
+            f'</span>'
+        )
         trs.append(
-            f'<tr class="nivel-{nivel}">'
+            f'<tr class="nivel-{nivel}" data-pilar="{_html.escape(pilar)}">'
             f'<td>{_html.escape(r.get("parent_code", ""))}</td>'
             f'<td>{_html.escape(r.get("parent_subject", ""))}</td>'
             f'<td>{_html.escape(r.get("subject", ""))}{ai_html}</td>'
             f'<td>{_html.escape(r.get("responsable", ""))}</td>'
-            f'<td>{_badge(r.get("categoria", ""))}</td>'
+            f'<td>{estado_cell}</td>'
             f'<td>{_html.escape(r.get("bucket", ""))}</td>'
-            f'<td class="nota-cell">{_html.escape(r.get("nota", ""))}</td>'
             f'<td>{_html.escape(r.get("checklist", ""))}</td>'
             f'<td>{_html.escape(r.get("start_str", ""))}</td>'
             f'<td>{_html.escape(r.get("end_str", ""))}</td>'
@@ -843,7 +982,7 @@ def generate_html_report(rows_sorted: list, today: datetime,
         f'</div>\n'
         f'{_html_kpis(rows_sorted, today)}\n'
         f'{_html_controls(rows_sorted)}\n'
-        f'{_html_table(rows_sorted)}\n'
+        f'{_html_table(rows_sorted, today)}\n'
         f'{_html_alerts(rows_sorted, today)}\n'
         f'<div class="footer">\n'
         f'  Generado el {date_str} &nbsp;|&nbsp; Plan Lineamiento Estratégico 2026\n'
@@ -947,7 +1086,8 @@ def resolve_buckets(token: str, project_id: str) -> tuple[dict, str | None]:
 def fetch_tasks(token: str, project_id: str) -> list:
     fields = ",".join([
         "msdyn_projecttaskid", "msdyn_subject", "msdyn_progress",
-        "msdyn_scheduledstart", "msdyn_scheduledend", "modifiedon", "msdyn_description",
+        "msdyn_scheduledstart", "msdyn_scheduledend", "modifiedon",
+        "msdyn_descriptionplaintext", "msdyn_description",
         "_msdyn_parenttask_value", "_msdyn_projectbucket_value", "statecode",
         "msdyn_summary", "msdyn_outlinelevel",
     ])
@@ -1033,7 +1173,9 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
         mod_str = (datetime.fromisoformat(mod_raw.replace("Z", "+00:00")).strftime("%d-%m-%Y")
                    if mod_raw else "?")
 
-        nota_raw = strip_html(t.get("msdyn_description") or "")
+        nota_raw = strip_html(
+            t.get("msdyn_descriptionplaintext") or t.get("msdyn_description") or ""
+        )
         tiene_nota = bool(nota_raw)
         nota_preview = (nota_raw[:80] + "...") if len(nota_raw) > 80 else nota_raw
 
