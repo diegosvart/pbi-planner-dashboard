@@ -443,6 +443,40 @@ def _html_styles() -> str:
   }
   .controls .clear-btn:hover { background: var(--neutral-400); }
 
+  .controls .export-btn {
+    padding: 5px 12px;
+    background: var(--corp-blue);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #fff;
+  }
+  .controls .export-btn:hover { background: var(--corp-blue-d); }
+
+  /* ── Riesgo editable ── */
+  .riesgo-cell { min-width: 160px; }
+  .riesgo-nivel {
+    font-size: 11px;
+    padding: 2px 4px;
+    border: 1px solid var(--neutral-200);
+    border-radius: 3px;
+    background: #fff;
+    cursor: pointer;
+    width: 70px;
+  }
+  .riesgo-nivel[value="ALTO"] { color: var(--crit-red); font-weight: 600; }
+  .riesgo-comment {
+    font-size: 11px;
+    padding: 2px 4px;
+    border: 1px solid var(--neutral-200);
+    border-radius: 3px;
+    width: 100%;
+    margin-top: 3px;
+    background: #fff;
+  }
+  .riesgo-comment:focus, .riesgo-nivel:focus { outline: 2px solid var(--corp-blue-l); }
+
   /* ── Table ── */
   .table-wrap { overflow-x: auto; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
   table {
@@ -716,6 +750,79 @@ def _html_script() -> str:
     applyFilters();
   });
 
+  /* ── Riesgo: localStorage save/restore ── */
+  var LS_PREFIX = 'pmo_riesgo_';
+
+  function saveRiesgo(taskid, nivel, comment) {
+    try {
+      localStorage.setItem(LS_PREFIX + taskid, JSON.stringify({ nivel: nivel, comment: comment }));
+    } catch (e) {}
+  }
+
+  function restoreRiesgo() {
+    document.querySelectorAll('.riesgo-nivel').forEach(function (sel) {
+      var tid = sel.dataset.taskid;
+      try {
+        var raw = localStorage.getItem(LS_PREFIX + tid);
+        if (raw) {
+          var data = JSON.parse(raw);
+          sel.value = data.nivel || '';
+          var inp = document.querySelector('.riesgo-comment[data-taskid="' + tid + '"]');
+          if (inp) inp.value = data.comment || '';
+        }
+      } catch (e) {}
+    });
+  }
+
+  document.querySelectorAll('.riesgo-nivel').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      var tid = sel.dataset.taskid;
+      var inp = document.querySelector('.riesgo-comment[data-taskid="' + tid + '"]');
+      saveRiesgo(tid, sel.value, inp ? inp.value : '');
+    });
+  });
+
+  document.querySelectorAll('.riesgo-comment').forEach(function (inp) {
+    inp.addEventListener('input', function () {
+      var tid = inp.dataset.taskid;
+      var sel = document.querySelector('.riesgo-nivel[data-taskid="' + tid + '"]');
+      saveRiesgo(tid, sel ? sel.value : '', inp.value);
+    });
+  });
+
+  restoreRiesgo();
+
+  /* ── Exportar CSV (incluye columna Riesgo desde localStorage) ── */
+  var exportBtn = document.getElementById('export-csv');
+  if (exportBtn) exportBtn.addEventListener('click', function () {
+    var headers = ['Codigo','Tarea padre','Tarea','Responsable','Estado',
+                   'Bucket','Checklist','F.inicio','F.fin','Ult. act.','Riesgo nivel','Riesgo comentario'];
+    var csvRows = [headers.join(',')];
+    rows.forEach(function (tr) {
+      if (tr.classList.contains('hidden-row')) return;
+      var cells = tr.querySelectorAll('td');
+      var tid   = tr.dataset.taskid || '';
+      var nivel = '', comment = '';
+      try {
+        var raw = localStorage.getItem(LS_PREFIX + tid);
+        if (raw) { var d = JSON.parse(raw); nivel = d.nivel || ''; comment = d.comment || ''; }
+      } catch (e) {}
+      var row = [];
+      for (var i = 0; i < 10; i++) {
+        var txt = cells[i] ? cells[i].textContent.replace(/[\\r\\n]+/g, ' ').trim() : '';
+        row.push('"' + txt.replace(/"/g, '""') + '"');
+      }
+      row.push('"' + nivel + '"');
+      row.push('"' + comment.replace(/"/g, '""') + '"');
+      csvRows.push(row.join(','));
+    });
+    var blob = new Blob([csvRows.join('\\r\\n')], { type: 'text/csv;charset=utf-8;' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url; a.download = 'reporte_pmo_riesgo.csv'; a.click();
+    URL.revokeObjectURL(url);
+  });
+
   /* ── Column sort ── */
   var sortState = { col: -1, asc: true };
   var headers   = table.querySelectorAll('thead th');
@@ -813,6 +920,7 @@ def _html_controls(rows: list) -> str:
   <label for="filter-text">Buscar:</label>
   <input id="filter-text" type="text" placeholder="texto libre…" />
   <button class="clear-btn" id="clear-filters">Limpiar</button>
+  <button class="export-btn" id="export-csv">Exportar CSV</button>
 </div>"""
 
 
@@ -828,7 +936,7 @@ def _badge(categoria: str) -> str:
 
 def _html_table(rows: list, today: datetime) -> str:
     headers = ["Código", "Tarea padre", "Tarea", "Responsable", "Estado",
-               "Bucket", "Checklist", "F.inicio", "F.fin", "Últ. act."]
+               "Bucket", "Checklist", "F.inicio", "F.fin", "Últ. act.", "Riesgo"]
     ths = "".join(f'<th>{h}<span class="sort-arrow">↕</span></th>' for h in headers)
 
     trs = []
@@ -856,8 +964,21 @@ def _html_table(rows: list, today: datetime) -> str:
             f'<span class="ai-tooltip">{_html.escape(analysis)}</span>'
             f'</span>'
         )
+        task_id = _html.escape(r.get("task_id", ""))
+        riesgo_cell = (
+            f'<td class="riesgo-cell">'
+            f'<select class="riesgo-nivel" data-taskid="{task_id}">'
+            f'<option value=""></option>'
+            f'<option value="ALTO">ALTO</option>'
+            f'<option value="MEDIO">MEDIO</option>'
+            f'<option value="BAJO">BAJO</option>'
+            f'</select>'
+            f'<input class="riesgo-comment" type="text" data-taskid="{task_id}" '
+            f'placeholder="Comentario…" />'
+            f'</td>'
+        )
         trs.append(
-            f'<tr class="nivel-{nivel}" data-pilar="{_html.escape(pilar)}">'
+            f'<tr class="nivel-{nivel}" data-pilar="{_html.escape(pilar)}" data-taskid="{task_id}">'
             f'<td>{_html.escape(r.get("parent_code", ""))}</td>'
             f'<td>{_html.escape(r.get("parent_subject", ""))}</td>'
             f'<td>{_html.escape(r.get("subject", ""))}{ai_html}</td>'
@@ -868,6 +989,7 @@ def _html_table(rows: list, today: datetime) -> str:
             f'<td>{_html.escape(r.get("start_str", ""))}</td>'
             f'<td>{_html.escape(r.get("end_str", ""))}</td>'
             f'<td>{_html.escape(r.get("mod_str", ""))}</td>'
+            f'{riesgo_cell}'
             f'</tr>'
         )
 
