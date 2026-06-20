@@ -8,6 +8,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 from plan_report import (
     extract_code, classify_task, build_parent_index, suggest_bucket,
     needs_escalation, build_report, group_and_sort,
+    build_checklist_index, assign_criticality_level, suggest_action,
+    sort_by_criticality, write_csv_pmo, strip_html,
 )
 
 TODAY = datetime(2026, 6, 11, tzinfo=timezone.utc)
@@ -301,7 +303,7 @@ def _make_raw_task(task_id, subject, parent_id, end_iso, progress=0.0, bucket_id
         "msdyn_progress": progress,
         "_msdyn_projectbucket_value": bucket_id,
         "modifiedon": "2026-06-01T00:00:00Z",
-        "msdyn_descriptionplaintext": None,
+        "msdyn_description": None,
         "msdyn_pfwmodifiedby": None,
         "statecode": statecode,
     }
@@ -354,7 +356,7 @@ class TestBuildReportPhantom:
     def test_nota_full_stored_in_entry(self):
         long_nota = "a" * 120
         task = _make_raw_task("t1", "NORM-001.1 - Tarea real", "p1", VENCIDA_END)
-        task["msdyn_descriptionplaintext"] = long_nota
+        task["msdyn_description"] = long_nota
         rows, _ = self._run([task])
         assert len(rows) == 1
         assert rows[0]["nota"] == long_nota
@@ -466,3 +468,312 @@ class TestGroupAndSortAlpha:
         result = group_and_sort(rows)
         subjects = [h["subject"] for h in result[0][1]["hijas"]]
         assert subjects == ["NORM-012.E1", "NORM-012.E2"]
+
+
+# ── strip_html ────────────────────────────────────────────────────────────────
+
+class TestStripHtml:
+    def test_simple_div(self):
+        assert strip_html("<div>Texto</div>") == "Texto"
+
+    def test_span_with_style(self):
+        assert strip_html('<span style="color:red;">Nota</span>') == "Nota"
+
+    def test_nested_tags(self):
+        result = strip_html("<div><p>Hola</p><p>Mundo</p></div>")
+        assert "Hola" in result
+        assert "Mundo" in result
+
+    def test_html_entities(self):
+        assert strip_html("&amp; &lt; &gt; &nbsp;") == "& < >"
+
+    def test_plain_text_unchanged(self):
+        assert strip_html("Sin tags aquí") == "Sin tags aquí"
+
+    def test_empty_string(self):
+        assert strip_html("") == ""
+
+    def test_collapses_whitespace(self):
+        result = strip_html("<div>  Mucho   espacio  </div>")
+        assert result == "Mucho espacio"
+
+
+# ── Issue #21 — build_checklist_index ────────────────────────────────────────
+
+class TestBuildChecklistIndex:
+    def test_empty_returns_empty(self):
+        assert build_checklist_index([]) == {}
+
+    def test_single_task_two_items_one_done(self):
+        records = [
+            {"_msdyn_projecttaskid_value": "tid1", "msdyn_projectchecklistcompleted": True},
+            {"_msdyn_projecttaskid_value": "tid1", "msdyn_projectchecklistcompleted": False},
+        ]
+        assert build_checklist_index(records) == {"tid1": "1/2"}
+
+    def test_multiple_tasks(self):
+        records = [
+            {"_msdyn_projecttaskid_value": "tid1", "msdyn_projectchecklistcompleted": True},
+            {"_msdyn_projecttaskid_value": "tid2", "msdyn_projectchecklistcompleted": False},
+            {"_msdyn_projecttaskid_value": "tid2", "msdyn_projectchecklistcompleted": True},
+        ]
+        result = build_checklist_index(records)
+        assert result["tid1"] == "1/1"
+        assert result["tid2"] == "1/2"
+
+    def test_no_task_id_skipped(self):
+        records = [{"msdyn_projectchecklistcompleted": True}]
+        assert build_checklist_index(records) == {}
+
+    def test_all_done(self):
+        records = [
+            {"_msdyn_projecttaskid_value": "tid1", "msdyn_projectchecklistcompleted": True},
+            {"_msdyn_projecttaskid_value": "tid1", "msdyn_projectchecklistcompleted": True},
+            {"_msdyn_projecttaskid_value": "tid1", "msdyn_projectchecklistcompleted": True},
+        ]
+        assert build_checklist_index(records) == {"tid1": "3/3"}
+
+    def test_none_done(self):
+        records = [
+            {"_msdyn_projecttaskid_value": "tid1", "msdyn_projectchecklistcompleted": False},
+            {"_msdyn_projecttaskid_value": "tid1", "msdyn_projectchecklistcompleted": False},
+        ]
+        assert build_checklist_index(records) == {"tid1": "0/2"}
+
+
+# ── Issue #22 — assign_criticality_level ─────────────────────────────────────
+
+class TestAssignCriticalityLevel:
+    def _entry(self, categoria, bucket="In Progress", tiene_nota=False, end_offset_days=None):
+        if end_offset_days is None:
+            end_offset_days = -5 if categoria == "VENCIDA" else (0 if categoria == "EN FECHA" else 10)
+        end = (TODAY + timedelta(days=end_offset_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return {"categoria": categoria, "bucket": bucket, "tiene_nota": tiene_nota, "end_dt": end}
+
+    def test_level1_blocked_vencida(self):
+        assert assign_criticality_level(self._entry("VENCIDA", "Blocked", True), TODAY) == 1
+
+    def test_level1_blocked_vencida_no_nota(self):
+        assert assign_criticality_level(self._entry("VENCIDA", "Blocked", False), TODAY) == 1
+
+    def test_level2_vencida_sin_nota(self):
+        assert assign_criticality_level(self._entry("VENCIDA", "In Progress", False), TODAY) == 2
+
+    def test_level3_vencida_con_nota(self):
+        assert assign_criticality_level(self._entry("VENCIDA", "In Progress", True), TODAY) == 3
+
+    def test_level4_en_fecha(self):
+        assert assign_criticality_level(self._entry("EN FECHA"), TODAY) == 4
+
+    def test_level5_en_curso_3_days(self):
+        assert assign_criticality_level(self._entry("EN CURSO", end_offset_days=3), TODAY) == 5
+
+    def test_level5_en_curso_1_day(self):
+        assert assign_criticality_level(self._entry("EN CURSO", end_offset_days=1), TODAY) == 5
+
+    def test_level6_en_curso_7_days(self):
+        assert assign_criticality_level(self._entry("EN CURSO", end_offset_days=7), TODAY) == 6
+
+    def test_level6_en_curso_4_days(self):
+        assert assign_criticality_level(self._entry("EN CURSO", end_offset_days=4), TODAY) == 6
+
+    def test_level7_en_curso_8_days(self):
+        assert assign_criticality_level(self._entry("EN CURSO", end_offset_days=8), TODAY) == 7
+
+    def test_level7_en_curso_30_days(self):
+        assert assign_criticality_level(self._entry("EN CURSO", end_offset_days=30), TODAY) == 7
+
+
+# ── Issue #22 — build_report usa msdyn_description ───────────────────────────
+
+class TestBuildReportUsesDescription:
+    """build_report debe leer msdyn_description, no msdyn_descriptionplaintext."""
+
+    def _run(self, tasks):
+        parent_index = {"p1": "NORM-001 - Padre"}
+        return build_report(tasks, {}, None, parent_index, TODAY)
+
+    def test_description_field_read(self):
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea", "p1", VENCIDA_END)
+        task["msdyn_description"] = "Nota via msdyn_description"
+        rows, _ = self._run([task])
+        assert rows[0]["nota"] == "Nota via msdyn_description"
+        assert rows[0]["tiene_nota"] is True
+
+    def test_entry_has_task_id(self):
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea", "p1", VENCIDA_END)
+        rows, _ = self._run([task])
+        assert rows[0]["task_id"] == "t1"
+
+    def test_entry_has_start_str(self):
+        start = (TODAY - timedelta(days=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea", "p1", VENCIDA_END)
+        task["msdyn_scheduledstart"] = start
+        rows, _ = self._run([task])
+        assert rows[0]["start_str"] != ""
+
+
+# ── Issue #23 — suggest_action ────────────────────────────────────────────────
+
+class TestSuggestAction:
+    def _entry(self, categoria, bucket, tiene_nota, nota="", dias_vencida=0):
+        end = (TODAY - timedelta(days=dias_vencida)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return {"categoria": categoria, "bucket": bucket,
+                "tiene_nota": tiene_nota, "nota_preview": nota, "end_dt": end}
+
+    def test_vencida_con_nota_not_blocked_suggest_blocked(self):
+        entry = self._entry("VENCIDA", "In Progress", True, "pendiente respuesta")
+        assert "Blocked" in suggest_action(entry, TODAY)
+
+    def test_blocked_with_unblock_keyword_suggest_in_progress(self):
+        entry = self._entry("EN FECHA", "Blocked", True, "proveedor confirmó entrega")
+        assert "In Progress" in suggest_action(entry, TODAY)
+
+    def test_vencida_sin_nota_over_14_suggest_escalar(self):
+        entry = self._entry("VENCIDA", "In Progress", False, dias_vencida=15)
+        result = suggest_action(entry, TODAY)
+        assert "escalar" in result.lower()
+
+    def test_vencida_blocked_over_14_suggest_escalar(self):
+        entry = self._entry("VENCIDA", "Blocked", True, "sin avance", dias_vencida=20)
+        result = suggest_action(entry, TODAY)
+        assert "escalar" in result.lower()
+
+    def test_en_fecha_no_issue_empty(self):
+        entry = self._entry("EN FECHA", "In Progress", False)
+        assert suggest_action(entry, TODAY) == ""
+
+    def test_en_curso_no_issue_empty(self):
+        end = (TODAY + timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        entry = {"categoria": "EN CURSO", "bucket": "In Progress",
+                 "tiene_nota": False, "nota_preview": "", "end_dt": end}
+        assert suggest_action(entry, TODAY) == ""
+
+    def test_vencida_already_blocked_no_nota_over_14_escalate(self):
+        entry = self._entry("VENCIDA", "Blocked", False, dias_vencida=20)
+        result = suggest_action(entry, TODAY)
+        assert "escalar" in result.lower()
+
+
+# ── Issue #24 — sort_by_criticality ──────────────────────────────────────────
+
+class TestSortByCriticality:
+    def _entry(self, categoria, bucket, tiene_nota, end_offset_days):
+        end = (TODAY + timedelta(days=end_offset_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return {"categoria": categoria, "bucket": bucket,
+                "tiene_nota": tiene_nota, "end_dt": end}
+
+    def test_blocked_vencida_first(self):
+        rows = [
+            self._entry("EN CURSO", "In Progress", False, 10),
+            self._entry("VENCIDA", "Blocked", True, -5),
+        ]
+        result = sort_by_criticality(rows, TODAY)
+        assert result[0]["bucket"] == "Blocked"
+        assert result[0]["categoria"] == "VENCIDA"
+
+    def test_vencida_sin_nota_before_vencida_con_nota(self):
+        rows = [
+            self._entry("VENCIDA", "In Progress", True, -3),
+            self._entry("VENCIDA", "In Progress", False, -3),
+        ]
+        result = sort_by_criticality(rows, TODAY)
+        assert result[0]["tiene_nota"] is False
+
+    def test_vencida_before_en_fecha(self):
+        rows = [
+            self._entry("EN FECHA", "In Progress", False, 0),
+            self._entry("VENCIDA", "In Progress", True, -2),
+        ]
+        result = sort_by_criticality(rows, TODAY)
+        assert result[0]["categoria"] == "VENCIDA"
+
+    def test_en_fecha_before_en_curso(self):
+        rows = [
+            self._entry("EN CURSO", "In Progress", False, 5),
+            self._entry("EN FECHA", "In Progress", False, 0),
+        ]
+        result = sort_by_criticality(rows, TODAY)
+        assert result[0]["categoria"] == "EN FECHA"
+
+    def test_en_curso_3_days_before_7_days(self):
+        rows = [
+            self._entry("EN CURSO", "In Progress", False, 7),
+            self._entry("EN CURSO", "In Progress", False, 3),
+        ]
+        result = sort_by_criticality(rows, TODAY)
+        assert result[0]["end_dt"] < result[1]["end_dt"]
+
+    def test_more_overdue_first_within_same_level(self):
+        rows = [
+            self._entry("VENCIDA", "In Progress", True, -3),
+            self._entry("VENCIDA", "In Progress", True, -10),
+        ]
+        result = sort_by_criticality(rows, TODAY)
+        assert result[0]["end_dt"] < result[1]["end_dt"]
+
+
+# ── Issue #24 — write_csv_pmo ─────────────────────────────────────────────────
+
+class TestWriteCsvPmo:
+    def _row(self):
+        return {
+            "task_id": "tid1",
+            "parent_code": "NORM-001",
+            "parent_subject": "NORM-001 - Padre de prueba",
+            "subject": "NORM-001.E1 - Subtarea",
+            "responsable": "Diego Morales",
+            "categoria": "VENCIDA",
+            "nivel_criticidad": 2,
+            "bucket": "In Progress",
+            "nota": "Nota de prueba",
+            "checklist": "1/3",
+            "start_str": "01-06-2026",
+            "end_str": "10-06-2026",
+            "mod_str": "15-06-2026",
+            "suggest_action_text": "Mover a Blocked",
+        }
+
+    def test_headers_correct(self):
+        import io as _io, csv as _csv
+        buf = _io.StringIO()
+        write_csv_pmo([self._row()], buf)
+        buf.seek(0)
+        reader = _csv.DictReader(buf)
+        expected = ["Codigo", "TareaPadre", "Tarea", "Responsable", "Estado",
+                    "NivelCriticidad", "Bucket", "Nota", "Checklist",
+                    "FechaInicio", "FechaFin", "UltimaActualizacion", "SugerenciaAI"]
+        assert reader.fieldnames == expected
+
+    def test_row_values_correct(self):
+        import io as _io, csv as _csv
+        buf = _io.StringIO()
+        write_csv_pmo([self._row()], buf)
+        buf.seek(0)
+        row = next(_csv.DictReader(buf))
+        assert row["Codigo"] == "NORM-001"
+        assert row["TareaPadre"] == "NORM-001 - Padre de prueba"
+        assert row["Tarea"] == "NORM-001.E1 - Subtarea"
+        assert row["NivelCriticidad"] == "2"
+        assert row["Checklist"] == "1/3"
+        assert row["SugerenciaAI"] == "Mover a Blocked"
+        assert row["FechaInicio"] == "01-06-2026"
+
+    def test_empty_rows_header_only(self):
+        import io as _io
+        buf = _io.StringIO()
+        write_csv_pmo([], buf)
+        buf.seek(0)
+        lines = [l for l in buf.read().strip().splitlines() if l.strip()]
+        assert len(lines) == 1
+        assert "Codigo" in lines[0]
+
+    def test_multiple_rows(self):
+        import io as _io, csv as _csv
+        rows = [self._row(), {**self._row(), "subject": "NORM-001.E2", "categoria": "EN CURSO"}]
+        buf = _io.StringIO()
+        write_csv_pmo(rows, buf)
+        buf.seek(0)
+        data = list(_csv.DictReader(buf))
+        assert len(data) == 2
+        assert data[1]["Estado"] == "EN CURSO"
