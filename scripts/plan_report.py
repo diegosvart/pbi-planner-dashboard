@@ -22,7 +22,7 @@ import subprocess
 import sys
 import urllib.request
 import urllib.parse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 
 ORG = "org914d3d16.crm.dynamics.com"
@@ -40,6 +40,22 @@ UNBLOCK_KEYWORDS = ["desbloqueado", "resuelto", "solucionado", "confirmó", "con
 def extract_code(subject: str | None) -> str | None:
     m = CODE_RE.match(subject or "")
     return m.group(1) if m else None
+
+
+def santiago_today(reference: datetime | None = None) -> datetime:
+    """Devuelve la medianoche de "hoy" en hora de Santiago (America/Santiago, ~UTC-4).
+
+    Usar esto como referencia para 'today' evita que tareas que vencen hoy en Chile
+    aparezcan como VENCIDAS por el cruce de medianoche UTC.
+    """
+    ref = reference or datetime.now(tz=timezone.utc)
+    try:
+        from zoneinfo import ZoneInfo  # Python 3.9+; stdlib
+        tz = ZoneInfo("America/Santiago")
+    except Exception:
+        # Fallback: offset fijo UTC-4 si la base IANA no está instalada (tzdata ausente)
+        tz = timezone(timedelta(hours=-4))
+    return ref.astimezone(tz).replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def classify_task(end_dt: datetime, today: datetime, start_dt: datetime | None = None) -> str | None:
@@ -1155,6 +1171,8 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
         bucket_id = t.get("_msdyn_projectbucket_value")
         if done_id and bucket_id == done_id:
             continue
+        if buckets.get(bucket_id, "").strip().lower() == "backlog":
+            continue
         end_raw = t.get("msdyn_scheduledend")
         if not end_raw:
             continue
@@ -1370,7 +1388,7 @@ def main():
     today_dt = (
         datetime.strptime(args.today, "%Y-%m-%d").replace(tzinfo=timezone.utc)
         if args.today
-        else datetime.now(tz=timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        else santiago_today()
     )
 
     if args.from_cache:

@@ -10,7 +10,7 @@ from plan_report import (
     needs_escalation, build_report, group_and_sort,
     build_checklist_index, assign_criticality_level, suggest_action,
     sort_by_criticality, write_csv_pmo, strip_html, generate_html_report,
-    analyze_task, pillar_of,
+    analyze_task, pillar_of, santiago_today,
 )
 
 TODAY = datetime(2026, 6, 11, tzinfo=timezone.utc)
@@ -1223,3 +1223,82 @@ class TestGenerateHtmlReportV2:
                         end_str="30-07-2026", suggest_action_text="")
         html = generate_html_report([row], self.TODAY_H, "X")
         assert "In Progress" in html
+
+
+# ── Filtro Backlog + huso horario Chile ───────────────────────────────────────
+
+class TestSantiagoToday:
+    """santiago_today convierte UTC a fecha local de Chile (UTC-4)."""
+
+    def test_rolls_back_across_utc_midnight(self):
+        # 01:00 UTC del día 20 = 21:00 del día 19 en Santiago (UTC-4)
+        ref = datetime(2026, 6, 20, 1, 0, tzinfo=timezone.utc)
+        result = santiago_today(ref)
+        assert result.date().isoformat() == "2026-06-19"
+
+    def test_midday_utc_same_day_santiago(self):
+        # 13:00 UTC del día 19 = 09:00 día 19 en Santiago → misma fecha
+        ref = datetime(2026, 6, 19, 13, 0, tzinfo=timezone.utc)
+        result = santiago_today(ref)
+        assert result.date().isoformat() == "2026-06-19"
+
+    def test_returns_midnight_time(self):
+        ref = datetime(2026, 6, 20, 1, 0, tzinfo=timezone.utc)
+        result = santiago_today(ref)
+        assert result.hour == 0 and result.minute == 0 and result.second == 0
+
+
+class TestClassifyWithSantiagoToday:
+    """Reproduce el caso INTER-006.E2: vence 19-06 13:00Z, 'hoy' UTC ya es 20-06."""
+
+    def test_inter006_en_fecha_with_santiago_today(self):
+        # scheduledend = 2026-06-19T13:00Z
+        end_dt = datetime(2026, 6, 19, 13, 0, tzinfo=timezone.utc)
+        # "ahora" en UTC es el 20 (01:00), pero en Santiago sigue siendo 19
+        today_santiago = santiago_today(datetime(2026, 6, 20, 1, 0, tzinfo=timezone.utc))
+        result = classify_task(end_dt, today_santiago)
+        # Con huso de Chile, la tarea vence HOY → EN FECHA, no VENCIDA
+        assert result == "EN FECHA"
+
+    def test_genuinely_overdue_still_vencida(self):
+        # Tarea que venció el 18-06, hoy (Santiago) es 19-06 → VENCIDA sin importar huso
+        end_dt = datetime(2026, 6, 18, 13, 0, tzinfo=timezone.utc)
+        today_santiago = santiago_today(datetime(2026, 6, 19, 13, 0, tzinfo=timezone.utc))
+        result = classify_task(end_dt, today_santiago)
+        assert result == "VENCIDA"
+
+
+class TestBuildReportExcludesBacklog:
+    """Tareas en bucket Backlog no deben aparecer como accionables."""
+
+    def _run(self, tasks, bucket_name="Backlog"):
+        backlog_id = "backlog-bucket-id"
+        buckets = {backlog_id: bucket_name}
+        parent_index = {"p1": "NORM-001 - Padre"}
+        for t in tasks:
+            t["_msdyn_projectbucket_value"] = backlog_id
+        return build_report(tasks, buckets, None, parent_index, TODAY)
+
+    def test_backlog_task_excluded(self):
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea backlog", "p1",
+                              (TODAY - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+        rows, _ = self._run([task])
+        assert rows == []
+
+    def test_backlog_case_insensitive(self):
+        # "BACKLOG", "Backlog", "backlog" deben excluirse por igual
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea", "p1",
+                              (TODAY - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+        rows, _ = self._run([task], bucket_name="BACKLOG")
+        assert rows == []
+
+    def test_in_progress_task_still_included(self):
+        # Asegurar que In Progress no queda filtrado por error
+        ip_id = "ip-bucket-id"
+        task = _make_raw_task("t1", "NORM-001.1 - Tarea IP", "p1",
+                              (TODAY - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+        task["_msdyn_projectbucket_value"] = ip_id
+        buckets = {ip_id: "In Progress"}
+        parent_index = {"p1": "NORM-001 - Padre"}
+        rows, _ = build_report([task], buckets, None, parent_index, TODAY)
+        assert len(rows) == 1
