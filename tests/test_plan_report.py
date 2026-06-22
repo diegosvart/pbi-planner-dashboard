@@ -10,7 +10,8 @@ from plan_report import (
     needs_escalation, build_report, group_and_sort,
     build_checklist_index, assign_criticality_level, suggest_action,
     sort_by_criticality, write_csv_pmo, strip_html, generate_html_report,
-    analyze_task, pillar_of, santiago_today,
+    analyze_task, pillar_of, santiago_today, strip_parent_code,
+    _html_styles,
 )
 
 TODAY = datetime(2026, 6, 11, tzinfo=timezone.utc)
@@ -1363,3 +1364,149 @@ class TestRiesgoColumn:
         # El JS de exportación CSV debe incluir "Riesgo" como columna
         html = self._html()
         assert "Riesgo" in html and "exportar" in html.lower()
+
+
+# ── PR #32 fixes UX — strip_parent_code ──────────────────────────────────────
+
+class TestStripParentCode:
+    def test_dash_separator_stripped(self):
+        result = strip_parent_code("PORT-020 - Acompañamiento Sitrack — control telemetría")
+        assert result == "Acompañamiento Sitrack — control telemetría"
+
+    def test_em_dash_internal_preserved(self):
+        result = strip_parent_code("NORM-001 - Sistema — Módulo")
+        assert result == "Sistema — Módulo"
+
+    def test_colon_separator(self):
+        result = strip_parent_code("NORM-001: Descripción del proyecto")
+        assert result == "Descripción del proyecto"
+
+    def test_subcode_stripped(self):
+        result = strip_parent_code("PORT-020.1 - Seguimiento detalle")
+        assert result == "Seguimiento detalle"
+
+    def test_no_code_passthrough(self):
+        result = strip_parent_code("Sin código asignado")
+        assert result == "Sin código asignado"
+
+    def test_none_returns_empty(self):
+        assert strip_parent_code(None) == ""
+
+    def test_empty_string_returns_empty(self):
+        assert strip_parent_code("") == ""
+
+    def test_en_dash_separator(self):
+        result = strip_parent_code("INTER-003 – Base de datos")
+        assert result == "Base de datos"
+
+    def test_lowercase_no_code_passthrough(self):
+        result = strip_parent_code("reunión de kick-off sin código")
+        assert result == "reunión de kick-off sin código"
+
+
+# ── PR #32 fixes UX — build_report stores clean parent_subject ───────────────
+
+class TestBuildReportParentSubjectClean:
+    def _run(self, tasks, parent_index):
+        return build_report(tasks, {}, None, parent_index, TODAY)
+
+    def test_parent_subject_code_stripped(self):
+        parent_index = {"p1": "PORT-020 - Acompañamiento Sitrack — control telemetría"}
+        task = _make_raw_task("t1", "PORT-020.1 - Subtarea", "p1", VENCIDA_END)
+        rows, _ = self._run([task], parent_index)
+        assert len(rows) == 1
+        assert rows[0]["parent_subject"] == "Acompañamiento Sitrack — control telemetría"
+
+    def test_parent_code_still_preserved(self):
+        parent_index = {"p1": "PORT-020 - Acompañamiento Sitrack — control telemetría"}
+        task = _make_raw_task("t1", "PORT-020.1 - Subtarea", "p1", VENCIDA_END)
+        rows, _ = self._run([task], parent_index)
+        assert rows[0]["parent_code"] == "PORT-020"
+
+    def test_parent_without_code_unchanged(self):
+        parent_index = {"p1": "Tarea raíz sin código"}
+        task = _make_raw_task("t1", "NORM-001.1 - Subtarea", "p1", VENCIDA_END)
+        rows, _ = self._run([task], parent_index)
+        assert rows[0]["parent_subject"] == "Tarea raíz sin código"
+
+
+# ── PR #32 fixes UX — header y subtítulo del reporte ─────────────────────────
+
+class TestGenerateHtmlReportHeaderFix:
+    TODAY_H = datetime(2026, 6, 22, tzinfo=timezone.utc)
+
+    def _run(self, plan_label="Planificación área TI 2026"):
+        return generate_html_report([_make_row()], self.TODAY_H, plan_label)
+
+    def test_header_dashboard_gestion_pmo(self):
+        assert "Dashboard gestión PMO" in self._run()
+
+    def test_header_includes_plan_name(self):
+        assert "Planificación área TI 2026" in self._run()
+
+    def test_subtitle_ultima_actualizacion(self):
+        assert "Última actualización:" in self._run()
+
+    def test_no_fecha_referencia_label(self):
+        # El subtítulo viejo decía "Fecha de referencia" — debe desaparecer
+        assert "Fecha de referencia" not in self._run()
+
+
+# ── PR #32 fixes UX — alertas muestran código y nombre del padre ──────────────
+
+class TestHtmlAlertsShowParent:
+    TODAY_H = datetime(2026, 6, 22, tzinfo=timezone.utc)
+
+    def _row_escalamiento(self):
+        return _make_row(
+            categoria="VENCIDA", bucket="Blocked",
+            parent_code="PORT-020",
+            parent_subject="Acompañamiento Sitrack",
+            subject="Subtarea específica",
+            end_dt="2026-05-01T00:00:00Z",
+            nivel_criticidad=1,
+        )
+
+    def _row_bucket(self):
+        return _make_row(
+            categoria="VENCIDA", bucket="In Progress",
+            parent_code="NORM-001",
+            parent_subject="Sistema Normativo",
+            subject="Actualizar documentos",
+            tiene_nota=True,
+            nivel_criticidad=2,
+            end_dt="2026-06-01T00:00:00Z",
+        )
+
+    def test_escalamiento_shows_parent_code(self):
+        html = generate_html_report([self._row_escalamiento()], self.TODAY_H, "Plan X")
+        # El escalamiento debe mostrar el código del padre en su sección
+        escalamiento_block = html.split("Escalamiento crítico")[1].split("Cambios de bucket")[0]
+        assert "PORT-020" in escalamiento_block
+
+    def test_escalamiento_shows_parent_subject(self):
+        html = generate_html_report([self._row_escalamiento()], self.TODAY_H, "Plan X")
+        escalamiento_block = html.split("Escalamiento crítico")[1].split("Cambios de bucket")[0]
+        assert "Acompañamiento Sitrack" in escalamiento_block
+
+    def test_bucket_suggestion_shows_parent_code(self):
+        html = generate_html_report([self._row_bucket()], self.TODAY_H, "Plan X")
+        bucket_block = html.split("Cambios de bucket")[1].split("Carga por responsable")[0]
+        assert "NORM-001" in bucket_block
+
+    def test_bucket_suggestion_shows_parent_subject(self):
+        html = generate_html_report([self._row_bucket()], self.TODAY_H, "Plan X")
+        bucket_block = html.split("Cambios de bucket")[1].split("Carga por responsable")[0]
+        assert "Sistema Normativo" in bucket_block
+
+
+# ── PR #32 fixes UX — resp-table th contraste ────────────────────────────────
+
+class TestRespTableThBackground:
+    def test_resp_table_th_has_background_property(self):
+        import re
+        css = _html_styles()
+        match = re.search(r'\.resp-table\s+th\s*\{([^}]+)\}', css)
+        assert match is not None, ".resp-table th no encontrado en CSS"
+        rule_body = match.group(1)
+        assert "background" in rule_body, ".resp-table th no tiene propiedad background"

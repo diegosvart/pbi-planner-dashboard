@@ -102,6 +102,34 @@ def suggest_bucket(entry: dict) -> dict | None:
     return None
 
 
+_STRIP_CODE_RE = re.compile(
+    r"^[A-Z]{2,}-\d+(?:\.\w+)?"   # código: PORT-020 o PORT-020.1
+    r"\s*[-–—:]\s*"                 # separador: -, –, —, :
+)
+
+
+def strip_parent_code(subject: str | None) -> str:
+    """Quita el prefijo de código y separador del inicio del subject.
+
+    Preserva guiones y em-dashes internos.
+    Ejemplo: 'PORT-020 - Acompañamiento Sitrack — control' → 'Acompañamiento Sitrack — control'
+    """
+    if not subject:
+        return ""
+    return _STRIP_CODE_RE.sub("", subject, count=1)
+
+
+def santiago_now() -> datetime:
+    """Devuelve el datetime actual en hora de Santiago (America/Santiago, ~UTC-4), con hora."""
+    now_utc = datetime.now(tz=timezone.utc)
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("America/Santiago")
+    except Exception:
+        tz = timezone(timedelta(hours=-4))
+    return now_utc.astimezone(tz)
+
+
 def strip_html(text: str) -> str:
     """Removes HTML tags and decodes entities. Collapses whitespace."""
     if not text:
@@ -650,6 +678,7 @@ def _html_styles() -> str:
   .resp-table th {
     text-align: left;
     font-weight: 600;
+    background: var(--neutral-50);
     color: var(--neutral-600);
     font-size: 11px;
     padding: 5px 8px;
@@ -1012,7 +1041,12 @@ def _html_alerts(rows: list, today: datetime) -> str:
             dias = (today - end_dt).days
             esc_items.append(
                 f'<div class="alert-item">'
-                f'<div class="alert-title">{_html.escape(r.get("subject", ""))}</div>'
+                f'<div class="alert-title">'
+                f'<span style="color:var(--neutral-600);font-size:10px;">'
+                f'{_html.escape(r.get("parent_code", ""))} — {_html.escape(r.get("parent_subject", ""))}'
+                f'</span><br>'
+                f'{_html.escape(r.get("subject", ""))}'
+                f'</div>'
                 f'<div class="alert-meta">'
                 f'Responsable: {_html.escape(r.get("responsable", ""))} &nbsp;|&nbsp; '
                 f'Vencida hace {dias} días &nbsp;|&nbsp; {_html.escape(e["reason"])}'
@@ -1027,6 +1061,9 @@ def _html_alerts(rows: list, today: datetime) -> str:
         if s:
             sug_items.append(
                 f'<div class="suggestion-item">'
+                f'<span style="color:var(--neutral-600);font-size:10px;">'
+                f'{_html.escape(r.get("parent_code", ""))} — {_html.escape(r.get("parent_subject", ""))}'
+                f'</span><br>'
                 f'<strong>{_html.escape(r.get("subject", ""))}</strong><br>'
                 f'{_html.escape(r.get("bucket", ""))} → {_html.escape(s["target_bucket"])} &nbsp;|&nbsp; '
                 f'{_html.escape(s["reason"])}'
@@ -1087,6 +1124,7 @@ def generate_html_report(rows_sorted: list, today: datetime,
       5. Footer con calidad de datos
     """
     date_str = today.strftime("%d-%m-%Y")
+    now_str = santiago_now().strftime("%d-%m-%Y %H:%M")
 
     # Footer de calidad de datos
     quality_parts = []
@@ -1114,8 +1152,8 @@ def generate_html_report(rows_sorted: list, today: datetime,
         f'</head>\n'
         f'<body>\n'
         f'<div class="report-header">\n'
-        f'  <h1>Reporte de Gestión PMO — {_html.escape(plan_label)}</h1>\n'
-        f'  <div class="subtitle">Fecha de referencia: {date_str} &nbsp;|&nbsp; '
+        f'  <h1>Dashboard gestión PMO — {_html.escape(plan_label)}</h1>\n'
+        f'  <div class="subtitle">Última actualización: {now_str} &nbsp;|&nbsp; '
         f'Tareas accionables (vencidas, en fecha, en curso) — bucket ≠ Done</div>\n'
         f'</div>\n'
         f'{_html_kpis(rows_sorted, today)}\n'
@@ -1190,6 +1228,20 @@ def fetch_all_pages(token: str, url: str) -> list:
         records.extend(data.get("value", []))
         next_url = data.get("@odata.nextLink")
     return records
+
+
+def resolve_project_name(token: str, project_id: str) -> str:
+    """Resuelve el nombre del proyecto dado su GUID. Fallback al ID truncado si falla."""
+    try:
+        url = f"{BASE_URL}/msdyn_projects({project_id})?$select=msdyn_subject"
+        data = odata_get(token, url)
+        name = (data.get("msdyn_subject") or "").strip()
+        if name:
+            print(f"  Nombre del proyecto: {name}")
+            return name
+    except Exception:
+        pass
+    return f"Proyecto {project_id[:8]}..."
 
 
 def resolve_project_id(token: str, plan_name: str) -> str:
@@ -1319,8 +1371,9 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
         tiene_nota = bool(nota_raw)
         nota_preview = (nota_raw[:80] + "...") if len(nota_raw) > 80 else nota_raw
 
-        parent_subject = parent_index.get(parent_id, "(padre desconocido)")
-        parent_code = extract_code(parent_subject) or parent_subject[:30]
+        parent_subject_raw = parent_index.get(parent_id, "(padre desconocido)")
+        parent_code = extract_code(parent_subject_raw) or parent_subject_raw[:30]
+        parent_subject = strip_parent_code(parent_subject_raw)
         bucket_name = buckets.get(bucket_id, f"Bucket-{(bucket_id or '')[:8]}")
         start_str = start_dt.strftime("%d-%m-%Y") if start_dt else ""
 
@@ -1527,14 +1580,16 @@ def main():
         missing_in_cache = [pid for pid in all_parent_ids if pid not in parent_index]
         if missing_in_cache and "extra_parents" in cache:
             parent_index.update(cache["extra_parents"])
+        checklist_records = cache.get("checklists", [])
         print(f"  {len(tasks)} tareas cargadas desde caché.")
+        print(f"  {len(checklist_records)} ítems de checklist cargados desde caché.")
     else:
         print("  Obteniendo token Azure...")
         token = get_token()
 
         if args.project_id:
             project_id = args.project_id
-            plan_label = f"Proyecto {project_id[:8]}..."
+            plan_label = resolve_project_name(token, project_id)
         else:
             print(f"  Buscando plan '{args.plan}'...")
             project_id = resolve_project_id(token, args.plan)
@@ -1558,6 +1613,11 @@ def main():
             extra_parents = resolve_cross_project_parents(token, missing_ids)
             parent_index.update(extra_parents)
 
+        print("  Consultando listas de comprobación...")
+        all_task_ids = [t["msdyn_projecttaskid"] for t in tasks]
+        checklist_records = fetch_checklists(token, all_task_ids)
+        print(f"  Checklists encontrados: {len(checklist_records)} ítems")
+
         if args.cache_file:
             cache_data = {
                 "plan_label": plan_label,
@@ -1566,6 +1626,7 @@ def main():
                 "done_id": done_id,
                 "tasks": tasks,
                 "extra_parents": extra_parents,
+                "checklists": checklist_records,
             }
             with open(args.cache_file, "w", encoding="utf-8") as f:
                 json.dump(cache_data, f, ensure_ascii=False, indent=2)
@@ -1573,15 +1634,8 @@ def main():
 
     rows, sin_titulo = build_report(tasks, buckets, done_id, parent_index, today_dt)
 
-    # Enrich: checklists (skip in cache mode to avoid extra network call)
-    if rows and not args.from_cache:
-        print("  Consultando listas de comprobación...")
-        task_ids = [r["task_id"] for r in rows]
-        checklist_records = fetch_checklists(token, task_ids)
-        checklist_index = build_checklist_index(checklist_records)
-        print(f"  Checklists encontrados: {len(checklist_index)} tareas con ítems")
-    else:
-        checklist_index = {}
+    # Enrich: checklists — siempre disponibles (desde red o desde caché)
+    checklist_index = build_checklist_index(checklist_records)
 
     # Enrich each row with criticality, checklist, and AI suggestion
     for r in rows:
