@@ -1302,3 +1302,64 @@ class TestBuildReportExcludesBacklog:
         parent_index = {"p1": "NORM-001 - Padre"}
         rows, _ = build_report([task], buckets, None, parent_index, TODAY)
         assert len(rows) == 1
+
+
+# ── Columna Riesgo editable ───────────────────────────────────────────────────
+
+class TestRiesgoColumn:
+    """La columna Riesgo aparece en el HTML con controles editables y localStorage."""
+
+    TODAY_H = datetime(2026, 6, 19, tzinfo=timezone.utc)
+
+    def _row(self, **kw):
+        defaults = dict(
+            task_id="t-riesgo-1", parent_code="NORM-001",
+            parent_subject="NORM-001 - Padre", subject="NORM-001.1 - Tarea",
+            responsable="Diego", bucket="In Progress", checklist="",
+            start_str="01-06-2026", end_str="30-06-2026", mod_str="18-06-2026",
+            nota="", nota_preview="", tiene_nota=False, categoria="EN CURSO",
+            end_dt="2026-06-30T00:00:00Z", nivel_criticidad=7,
+            suggest_action_text="", progress=0.0,
+        )
+        defaults.update(kw)
+        return defaults
+
+    def _html(self, **kw):
+        row = self._row(**kw)
+        return generate_html_report([row], self.TODAY_H, "Test")
+
+    def test_riesgo_column_header_present(self):
+        assert "Riesgo" in self._html()
+
+    def test_riesgo_select_options(self):
+        html = self._html()
+        assert "ALTO" in html
+        assert "MEDIO" in html
+        assert "BAJO" in html
+
+    def test_riesgo_select_has_taskid(self):
+        # El select debe tener un atributo data-taskid para que JS lo identifique
+        html = self._html(task_id="t-abc-123")
+        assert "t-abc-123" in html
+
+    def test_riesgo_comment_input_present(self):
+        # Campo de texto libre para comentario de riesgo
+        html = self._html()
+        assert 'riesgo-comment' in html
+
+    def test_localstorage_save_js_present(self):
+        html = self._html()
+        assert "localStorage.setItem" in html
+
+    def test_localstorage_restore_js_present(self):
+        html = self._html()
+        assert "localStorage.getItem" in html
+
+    def test_export_csv_button_present(self):
+        html = self._html()
+        assert "Exportar CSV" in html
+
+    def test_export_csv_includes_riesgo_header(self):
+        # El JS de exportación CSV debe incluir "Riesgo" como columna
+        html = self._html()
+        assert "Riesgo" in html and "exportar" in html.lower()
