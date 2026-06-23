@@ -11,7 +11,7 @@ from plan_report import (
     build_checklist_index, assign_criticality_level, suggest_action,
     sort_by_criticality, write_csv_pmo, strip_html, generate_html_report,
     analyze_task, pillar_of, santiago_today, strip_parent_code,
-    _html_styles,
+    _html_styles, build_group_lastmod,
 )
 
 TODAY = datetime(2026, 6, 11, tzinfo=timezone.utc)
@@ -555,8 +555,10 @@ def _make_row(
     suggest_action_text="Bloqueada y vencida hace 20 días — escalar",
     end_dt="2026-06-10T00:00:00Z",
     task_id="tid1",
+    group_mod_str=None,
+    group_mod_dt=None,
 ) -> dict:
-    return {
+    row = {
         "task_id": task_id,
         "subject": subject,
         "parent_code": parent_code,
@@ -574,6 +576,11 @@ def _make_row(
         "suggest_action_text": suggest_action_text,
         "end_dt": end_dt,
     }
+    if group_mod_str is not None:
+        row["group_mod_str"] = group_mod_str
+    if group_mod_dt is not None:
+        row["group_mod_dt"] = group_mod_dt
+    return row
 
 
 class TestGenerateHtmlReport:
@@ -961,7 +968,8 @@ class TestWriteCsvPmo:
         reader = _csv.DictReader(buf)
         expected = ["Codigo", "TareaPadre", "Tarea", "Responsable", "Estado",
                     "NivelCriticidad", "Bucket", "Nota", "Checklist",
-                    "FechaInicio", "FechaFin", "UltimaActualizacion", "SugerenciaAI"]
+                    "FechaInicio", "FechaFin", "UltimaActualizacion",
+                    "UltimaActualizacionGrupo", "SugerenciaAI"]
         assert reader.fieldnames == expected
 
     def test_row_values_correct(self):
@@ -1214,8 +1222,6 @@ class TestGenerateHtmlReportV2:
     def test_filter_bucket_contains_bucket_value(self):
         row = self._row(bucket="Blocked")
         html = generate_html_report([row], self.TODAY_H, "X")
-        # el bucket del row debe aparecer como opción del select de bucket
-        # (puede aparecer en otras partes también, pero filter-bucket lo incluye)
         assert "filter-bucket" in html and "Blocked" in html
 
     def test_filter_bucket_in_progress_option(self):
@@ -1224,6 +1230,169 @@ class TestGenerateHtmlReportV2:
                         end_str="30-07-2026", suggest_action_text="")
         html = generate_html_report([row], self.TODAY_H, "X")
         assert "In Progress" in html
+
+
+# ── build_group_lastmod ───────────────────────────────────────────────────────
+
+def _make_task(task_id: str, parent_id: str | None, modifiedon: str,
+               statecode: int = 0, progress: float = 0.5,
+               subject: str = "Tarea X",
+               scheduledend: str = "2026-07-01T00:00:00Z") -> dict:
+    return {
+        "msdyn_projecttaskid": task_id,
+        "_msdyn_parenttask_value": parent_id,
+        "modifiedon": modifiedon,
+        "statecode": statecode,
+        "msdyn_progress": progress,
+        "msdyn_subject": subject,
+        "msdyn_scheduledend": scheduledend,
+        "msdyn_scheduledstart": "2026-01-01T00:00:00Z",
+        "msdyn_pfwmodifiedby": {"fullname": "Test User"},
+        "_msdyn_projectbucket_value": None,
+        "msdyn_descriptionplaintext": "",
+    }
+
+
+class TestBuildGroupLastmod:
+    def test_max_among_children(self):
+        tasks = [
+            _make_task("c1", "pid1", "2026-05-20T00:00:00Z"),
+            _make_task("c2", "pid1", "2026-05-28T00:00:00Z"),
+            _make_task("c3", "pid1", "2026-05-15T00:00:00Z"),
+        ]
+        result = build_group_lastmod(tasks)
+        assert result["pid1"] == "2026-05-28T00:00:00Z"
+
+    def test_parent_record_included_when_max(self):
+        tasks = [
+            _make_task("pid1", None, "2026-06-01T00:00:00Z"),
+            _make_task("c1", "pid1", "2026-05-20T00:00:00Z"),
+        ]
+        result = build_group_lastmod(tasks)
+        assert result["pid1"] == "2026-06-01T00:00:00Z"
+
+    def test_child_wins_over_parent(self):
+        tasks = [
+            _make_task("pid1", None, "2026-05-10T00:00:00Z"),
+            _make_task("c1", "pid1", "2026-05-25T00:00:00Z"),
+        ]
+        result = build_group_lastmod(tasks)
+        assert result["pid1"] == "2026-05-25T00:00:00Z"
+
+    def test_task_without_parent_not_in_result(self):
+        tasks = [_make_task("orphan1", None, "2026-05-20T00:00:00Z")]
+        result = build_group_lastmod(tasks)
+        assert "orphan1" not in result
+
+    def test_multiple_groups_independent(self):
+        tasks = [
+            _make_task("c1", "gA", "2026-05-01T00:00:00Z"),
+            _make_task("c2", "gB", "2026-06-01T00:00:00Z"),
+        ]
+        result = build_group_lastmod(tasks)
+        assert result["gA"] == "2026-05-01T00:00:00Z"
+        assert result["gB"] == "2026-06-01T00:00:00Z"
+
+
+# ── build_report + group_mod ──────────────────────────────────────────────────
+
+class TestBuildReportGroupMod:
+    TODAY_R = datetime(2026, 6, 11, tzinfo=timezone.utc)
+
+    def _run(self, tasks):
+        parent_index = {"pid1": "PORT-031 - Proyecto piloto"}
+        return build_report(tasks, {}, None, parent_index, self.TODAY_R)
+
+    def test_group_mod_str_uses_sibling_max(self):
+        # child_a shown, child_b filtered (statecode=1) but more recent
+        tasks = [
+            _make_task("child_a", "pid1", "2026-05-26T00:00:00Z",
+                       scheduledend="2026-06-01T00:00:00Z"),  # VENCIDA → shown
+            _make_task("child_b", "pid1", "2026-05-28T00:00:00Z",
+                       statecode=1),  # filtered out
+        ]
+        rows, _ = self._run(tasks)
+        assert len(rows) == 1
+        assert rows[0]["group_mod_str"] == "28-05-2026"
+
+    def test_mod_str_unchanged(self):
+        tasks = [
+            _make_task("child_a", "pid1", "2026-05-26T00:00:00Z",
+                       scheduledend="2026-06-01T00:00:00Z"),
+            _make_task("child_b", "pid1", "2026-05-28T00:00:00Z",
+                       statecode=1),
+        ]
+        rows, _ = self._run(tasks)
+        assert rows[0]["mod_str"] == "26-05-2026"
+
+    def test_group_mod_fallback_when_no_siblings(self):
+        tasks = [
+            _make_task("child_a", "pid1", "2026-05-20T00:00:00Z",
+                       scheduledend="2026-06-01T00:00:00Z"),
+        ]
+        rows, _ = self._run(tasks)
+        assert rows[0]["group_mod_str"] == "20-05-2026"
+
+    def test_group_mod_dt_is_iso(self):
+        tasks = [
+            _make_task("child_a", "pid1", "2026-05-26T00:00:00Z",
+                       scheduledend="2026-06-01T00:00:00Z"),
+        ]
+        rows, _ = self._run(tasks)
+        assert "2026-05-26" in rows[0]["group_mod_dt"]
+
+
+# ── analyze_task con group_mod_str ────────────────────────────────────────────
+
+class TestAnalyzeTaskGroupDate:
+    TODAY_A = datetime(2026, 6, 11, tzinfo=timezone.utc)
+
+    def test_group_date_phrase_present(self):
+        entry = _make_row(
+            group_mod_str="28-05-2026",
+            end_dt="2026-06-01T00:00:00Z",
+        )
+        result = analyze_task(entry, self.TODAY_A)
+        assert "Última edición del proyecto" in result
+
+    def test_group_date_phrase_contains_date(self):
+        entry = _make_row(
+            group_mod_str="28-05-2026",
+            end_dt="2026-06-01T00:00:00Z",
+        )
+        result = analyze_task(entry, self.TODAY_A)
+        assert "28-05-2026" in result
+
+    def test_no_group_date_no_phrase(self):
+        entry = _make_row(end_dt="2026-06-01T00:00:00Z")
+        entry.pop("group_mod_str", None)
+        result = analyze_task(entry, self.TODAY_A)
+        assert "Última edición del proyecto" not in result
+
+
+# ── HTML table — columna Últ. act. grupo ─────────────────────────────────────
+
+class TestHtmlTableGroupColumn:
+    TODAY_H = datetime(2026, 6, 19, tzinfo=timezone.utc)
+
+    def _row_with_group(self, **kw):
+        r = _make_row(**kw)
+        r.setdefault("group_mod_str", "28-05-2026")
+        r.setdefault("group_mod_dt", "2026-05-28T00:00:00Z")
+        return r
+
+    def test_header_present(self):
+        html = generate_html_report([self._row_with_group()], self.TODAY_H, "X")
+        assert "Últ. act. grupo" in html
+
+    def test_group_date_in_cell(self):
+        html = generate_html_report([self._row_with_group(group_mod_str="28-05-2026")],
+                                    self.TODAY_H, "X")
+        assert "28-05-2026" in html
+
+    def test_csv_header_includes_group_col(self):
+        html = generate_html_report([self._row_with_group()], self.TODAY_H, "X")
+        assert "Ult. act. grupo" in html
 
 
 # ── Filtro Backlog + huso horario Chile ───────────────────────────────────────
