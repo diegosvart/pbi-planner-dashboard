@@ -68,6 +68,28 @@ def classify_task(end_dt: datetime, today: datetime, start_dt: datetime | None =
     return None
 
 
+def build_group_lastmod(tasks: list) -> dict:
+    """Returns {parent_id: max_modifiedon_iso} across parent record + all children.
+
+    Pass 1: collect max(modifiedon) per parent_id from child tasks.
+    Pass 2: include the parent task's own modifiedon if it is in the task list.
+    """
+    result: dict[str, str] = {}
+    for t in tasks:
+        mod = t.get("modifiedon", "")
+        parent_id = t.get("_msdyn_parenttask_value")
+        if mod and parent_id:
+            if parent_id not in result or mod > result[parent_id]:
+                result[parent_id] = mod
+    for t in tasks:
+        mod = t.get("modifiedon", "")
+        task_id = t.get("msdyn_projecttaskid")
+        if mod and task_id and task_id in result:
+            if mod > result[task_id]:
+                result[task_id] = mod
+    return result
+
+
 def build_parent_index(tasks: list, extra_parents: dict | None = None) -> dict:
     idx = {t["msdyn_projecttaskid"]: t.get("msdyn_subject", "(sin titulo)") for t in tasks}
     if extra_parents:
@@ -275,6 +297,10 @@ def analyze_task(entry: dict, today: datetime) -> str:
                 f"{days_info} En curso. {avance} Con nota de seguimiento — monitorear cierre."
             )
 
+    group_mod = entry.get("group_mod_str")
+    if group_mod:
+        parts.append(f"Última edición del proyecto (padre + hijas): {group_mod}.")
+
     return " ".join(parts).strip()
 
 
@@ -298,7 +324,7 @@ def write_csv_pmo(rows: list, out) -> None:
     """
     FIELDS = ["Codigo", "TareaPadre", "Tarea", "Responsable", "Estado",
               "NivelCriticidad", "Bucket", "Nota", "Checklist",
-              "FechaInicio", "FechaFin", "UltimaActualizacion", "SugerenciaAI"]
+              "FechaInicio", "FechaFin", "UltimaActualizacion", "UltimaActualizacionGrupo", "SugerenciaAI"]
     csv_rows = [
         {
             "Codigo": h.get("parent_code", ""),
@@ -313,6 +339,7 @@ def write_csv_pmo(rows: list, out) -> None:
             "FechaInicio": h.get("start_str", ""),
             "FechaFin": h.get("end_str", ""),
             "UltimaActualizacion": h.get("mod_str", ""),
+            "UltimaActualizacionGrupo": h.get("group_mod_str", ""),
             "SugerenciaAI": h.get("suggest_action_text", ""),
         }
         for h in rows
@@ -825,7 +852,7 @@ def _html_script() -> str:
   var exportBtn = document.getElementById('export-csv');
   if (exportBtn) exportBtn.addEventListener('click', function () {
     var headers = ['Codigo','Tarea padre','Tarea','Responsable','Estado',
-                   'Bucket','Checklist','F.inicio','F.fin','Ult. act.','Riesgo nivel','Riesgo comentario'];
+                   'Bucket','Checklist','F.inicio','F.fin','Ult. act.','Ult. act. grupo','Riesgo nivel','Riesgo comentario'];
     var csvRows = [headers.join(',')];
     rows.forEach(function (tr) {
       if (tr.classList.contains('hidden-row')) return;
@@ -837,7 +864,7 @@ def _html_script() -> str:
         if (raw) { var d = JSON.parse(raw); nivel = d.nivel || ''; comment = d.comment || ''; }
       } catch (e) {}
       var row = [];
-      for (var i = 0; i < 10; i++) {
+      for (var i = 0; i < 11; i++) {
         var txt = cells[i] ? cells[i].textContent.replace(/[\\r\\n]+/g, ' ').trim() : '';
         row.push('"' + txt.replace(/"/g, '""') + '"');
       }
@@ -874,8 +901,8 @@ def _html_script() -> str:
       var sorted = rows.slice().sort(function (a, b) {
         var ca = a.querySelectorAll('td')[idx];
         var cb = b.querySelectorAll('td')[idx];
-        var ta = ca ? ca.textContent.trim() : '';
-        var tb = cb ? cb.textContent.trim() : '';
+        var ta = ca ? (ca.dataset.sort !== undefined && ca.dataset.sort !== '' ? ca.dataset.sort : ca.textContent.trim()) : '';
+        var tb = cb ? (cb.dataset.sort !== undefined && cb.dataset.sort !== '' ? cb.dataset.sort : cb.textContent.trim()) : '';
         /* Numeric sort for columns with pure numbers (criticality, etc.) */
         var na = parseFloat(ta), nb = parseFloat(tb);
         var cmp = (!isNaN(na) && !isNaN(nb)) ? (na - nb) : ta.localeCompare(tb, 'es');
@@ -965,7 +992,7 @@ def _badge(categoria: str) -> str:
 
 def _html_table(rows: list, today: datetime) -> str:
     headers = ["Código", "Tarea padre", "Tarea", "Responsable", "Estado",
-               "Bucket", "Checklist", "F.inicio", "F.fin", "Últ. act.", "Riesgo"]
+               "Bucket", "Checklist", "F.inicio", "F.fin", "Últ. act.", "Últ. act. grupo", "Riesgo"]
     ths = "".join(f'<th>{h}<span class="sort-arrow">↕</span></th>' for h in headers)
 
     trs = []
@@ -1018,6 +1045,7 @@ def _html_table(rows: list, today: datetime) -> str:
             f'<td>{_html.escape(r.get("start_str", ""))}</td>'
             f'<td>{_html.escape(r.get("end_str", ""))}</td>'
             f'<td>{_html.escape(r.get("mod_str", ""))}</td>'
+            f'<td data-sort="{_html.escape(r.get("group_mod_dt", ""))}">{_html.escape(r.get("group_mod_str", ""))}</td>'
             f'{riesgo_cell}'
             f'</tr>'
         )
@@ -1326,6 +1354,7 @@ def resolve_cross_project_parents(token: str, missing_ids: list[str]) -> dict:
 def build_report(tasks: list, buckets: dict, done_id: str | None,
                  parent_index: dict, today: datetime) -> tuple[list, int]:
     """Returns (rows, sin_titulo_count). Excludes tasks with empty/whitespace subject."""
+    group_lastmod = build_group_lastmod(tasks)
     rows = []
     sin_titulo = 0
     for t in tasks:
@@ -1364,6 +1393,9 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
         mod_raw = t.get("modifiedon", "")
         mod_str = (datetime.fromisoformat(mod_raw.replace("Z", "+00:00")).strftime("%d-%m-%Y")
                    if mod_raw else "?")
+        group_mod_raw = group_lastmod.get(parent_id) or mod_raw
+        group_mod_str = (datetime.fromisoformat(group_mod_raw.replace("Z", "+00:00")).strftime("%d-%m-%Y")
+                         if group_mod_raw else mod_str)
 
         nota_raw = strip_html(
             t.get("msdyn_descriptionplaintext") or t.get("msdyn_description") or ""
@@ -1386,6 +1418,8 @@ def build_report(tasks: list, buckets: dict, done_id: str | None,
             "bucket": bucket_name,
             "mod_str": mod_str,
             "mod_dt": mod_raw or "9999",
+            "group_mod_str": group_mod_str,
+            "group_mod_dt": group_mod_raw or mod_raw or "9999",
             "nota": nota_raw,
             "nota_preview": nota_preview,
             "tiene_nota": tiene_nota,
