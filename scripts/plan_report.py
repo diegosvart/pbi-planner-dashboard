@@ -901,8 +901,8 @@ def _html_script() -> str:
       var sorted = rows.slice().sort(function (a, b) {
         var ca = a.querySelectorAll('td')[idx];
         var cb = b.querySelectorAll('td')[idx];
-        var ta = ca ? ca.textContent.trim() : '';
-        var tb = cb ? cb.textContent.trim() : '';
+        var ta = ca ? (ca.dataset.sort !== undefined && ca.dataset.sort !== '' ? ca.dataset.sort : ca.textContent.trim()) : '';
+        var tb = cb ? (cb.dataset.sort !== undefined && cb.dataset.sort !== '' ? cb.dataset.sort : cb.textContent.trim()) : '';
         /* Numeric sort for columns with pure numbers (criticality, etc.) */
         var na = parseFloat(ta), nb = parseFloat(tb);
         var cmp = (!isNaN(na) && !isNaN(nb)) ? (na - nb) : ta.localeCompare(tb, 'es');
@@ -1045,7 +1045,7 @@ def _html_table(rows: list, today: datetime) -> str:
             f'<td>{_html.escape(r.get("start_str", ""))}</td>'
             f'<td>{_html.escape(r.get("end_str", ""))}</td>'
             f'<td>{_html.escape(r.get("mod_str", ""))}</td>'
-            f'<td>{_html.escape(r.get("group_mod_str", ""))}</td>'
+            f'<td data-sort="{_html.escape(r.get("group_mod_dt", ""))}">{_html.escape(r.get("group_mod_str", ""))}</td>'
             f'{riesgo_cell}'
             f'</tr>'
         )
